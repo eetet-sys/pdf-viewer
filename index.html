@@ -19,12 +19,11 @@
             margin: 0; padding: 0; 
             background-color: var(--bg-color); color: var(--text); 
             font-family: 'Malgun Gothic', sans-serif; 
-            overflow: hidden; /* 스크롤바 원천 차단 */
+            overflow: hidden; 
             height: 100vh; width: 100vw; 
             display: flex; flex-direction: column; 
         }
 
-        /* 책 컨테이너: 전체화면 시 중앙 정렬 및 넘침 방지 */
         #book-container { 
             flex: 1; 
             width: 100%; height: 100%; 
@@ -34,7 +33,6 @@
             z-index: 1; 
         }
 
-        /* 전체화면 모드일 때 배경을 확실하게 처리 */
         #book-container:fullscreen {
             background-color: var(--bg-color);
             width: 100vw; height: 100vh;
@@ -107,7 +105,7 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // === DB Logic (동일) ===
+        // === DB Logic ===
         const DB_NAME = "EbookDB"; const STORE_NAME = "files";
         function openDB() {
             return new Promise((resolve, reject) => {
@@ -153,6 +151,8 @@
             btnReset: document.getElementById('btn-reset')
         };
 
+        // [중요] 생성된 페이지 요소들을 메모리에 영구 보관할 배열
+        let allPages = []; 
         let pageFlip, totalPages = 0, pdfDoc = null, zoomInstance = null, lastTap = 0, pdfOriginalRatio = 0.7;
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -195,6 +195,10 @@
 
         async function loadPDF(data) {
             try {
+                // 페이지 목록 초기화
+                allPages = []; 
+                els.flipbook.innerHTML = ""; // 기존 내용 비우기
+
                 pdfDoc = await pdfjsLib.getDocument(data).promise;
                 const fragment = document.createDocumentFragment();
                 const firstPage = await pdfDoc.getPage(1);
@@ -211,9 +215,17 @@
                     if (viewport.width > viewport.height * 1.1) {
                         const [l, r] = splitCanvas(canvas);
                         l.classList.add('page-canvas'); r.classList.add('page-canvas');
-                        l.dataset.pdfIdx = i; r.dataset.pdfIdx = i; fragment.appendChild(l); fragment.appendChild(r);
+                        l.dataset.pdfIdx = i; r.dataset.pdfIdx = i; 
+                        
+                        // [중요] 배열에도 저장하고 Fragment에도 추가
+                        allPages.push(l); allPages.push(r);
+                        fragment.appendChild(l); fragment.appendChild(r);
                     } else {
-                        canvas.classList.add('page-canvas'); canvas.dataset.pdfIdx = i; fragment.appendChild(canvas);
+                        canvas.classList.add('page-canvas'); canvas.dataset.pdfIdx = i;
+                        
+                        // [중요] 배열에도 저장하고 Fragment에도 추가
+                        allPages.push(canvas);
+                        fragment.appendChild(canvas);
                     }
                     els.loading.innerText = `변환 중... (${i}/${pdfDoc.numPages})`;
                 }
@@ -229,10 +241,7 @@
         }
 
         function initFlipBook() {
-            // [수정] 전체화면 시 여백 계산을 더 정밀하게 함
             const isFullscreen = document.fullscreenElement !== null;
-            
-            // 여백: 전체화면이면 20, 아니면 40 (UI 공간 확보)
             const padding = isFullscreen ? 20 : 40; 
             
             const containerW = els.bookContainer.clientWidth - padding;
@@ -241,13 +250,11 @@
             let bookH = containerH;
             let bookW = bookH * pdfOriginalRatio;
 
-            // 컨테이너 너비를 넘어가면 너비 기준으로 높이 재조정
             if (bookW > containerW) { 
                 bookW = containerW; 
                 bookH = bookW / pdfOriginalRatio; 
             }
 
-            // 소수점 픽셀로 인한 미세한 스크롤 방지를 위해 floor 사용
             bookW = Math.floor(bookW);
             bookH = Math.floor(bookH);
 
@@ -260,7 +267,10 @@
                 autoSize: true 
             });
 
-            pageFlip.loadFromHTML(els.flipbook.querySelectorAll('.page-canvas'));
+            // [수정] DOM에 있는 요소가 아니라, 저장해둔 배열(allPages)을 사용해 로드
+            // 이렇게 하면 HTML이 비어있어도 메모리에서 다시 가져옵니다.
+            pageFlip.loadFromHTML(allPages);
+            
             totalPages = pageFlip.getPageCount();
             els.slider.max = totalPages - 1;
             
@@ -284,9 +294,10 @@
 
         function openZoomView() {
             const currentIdx = pageFlip.getCurrentPageIndex();
-            const pages = els.flipbook.querySelectorAll('.page-canvas');
-            if (pages[currentIdx]) {
-                els.zoomImg.src = pages[currentIdx].toDataURL();
+            // 메모리에 저장된 원본 페이지 접근
+            const currentPage = allPages[currentIdx];
+            if (currentPage) {
+                els.zoomImg.src = currentPage.toDataURL();
                 els.zoomLayer.style.display = 'block';
                 if (zoomInstance) zoomInstance.dispose();
                 zoomInstance = Panzoom(document.getElementById('zoom-container'), { maxScale: 5, minScale: 1, contain: 'outside' });
@@ -297,10 +308,8 @@
         els.zoomClose.addEventListener('click', () => { els.zoomLayer.style.display = 'none'; if(zoomInstance) zoomInstance.dispose(); });
         els.zoomLayer.addEventListener('touchend', () => { if (new Date().getTime() - lastTap < 300) els.zoomClose.click(); lastTap = new Date().getTime(); });
         
-        // [수정] 전체화면 버튼 로직
         els.btnFullscreen.addEventListener('click', () => {
             if (!document.fullscreenElement) { 
-                // 컨테이너만 전체화면이 아니라 문서 전체를 전체화면으로 (호환성 UP)
                 document.documentElement.requestFullscreen().catch(err => console.log(err));
                 els.btnFullscreen.innerText = "축소"; 
             } else { 
@@ -309,29 +318,28 @@
             }
         });
 
-        // [중요] 전체화면 상태 변경 감지 리스너 (화면 크기 재계산 트리거)
         document.addEventListener('fullscreenchange', () => {
-            // 브라우저 렌더링이 완료된 후 실행하기 위해 약간의 지연(100ms) 추가
-            setTimeout(() => {
-                reloadBookSize();
-            }, 100);
-            
-            // 버튼 텍스트 동기화
-            if (document.fullscreenElement) {
-                els.btnFullscreen.innerText = "축소";
-            } else {
-                els.btnFullscreen.innerText = "전체화면";
-            }
+            setTimeout(() => { reloadBookSize(); }, 100);
+            if (document.fullscreenElement) { els.btnFullscreen.innerText = "축소"; } 
+            else { els.btnFullscreen.innerText = "전체화면"; }
         });
         
-        // [중요] 리사이즈/전체화면 시 책 크기 다시 맞추는 함수 분리
         let resizeTimeout;
         function reloadBookSize() {
-            if (pageFlip) { 
+            if (pageFlip && allPages.length > 0) { // 페이지가 있을 때만 실행
                 const idx = pageFlip.getCurrentPageIndex(); 
-                pageFlip.destroy(); // 기존 인스턴스 제거
-                initFlipBook();     // 현재 화면 크기에 맞춰 재생성
-                pageFlip.turnToPage(idx); // 읽던 페이지 복구
+                pageFlip.destroy(); 
+                
+                // [핵심] 기존 컨테이너를 비우고, 저장해둔 페이지들을 다시 DOM에 집어넣음
+                els.flipbook.innerHTML = "";
+                allPages.forEach(page => els.flipbook.appendChild(page));
+                
+                initFlipBook();     
+                
+                // 페이지 범위 안전장치
+                if(idx < totalPages) {
+                    pageFlip.turnToPage(idx); 
+                }
             }
         }
 
