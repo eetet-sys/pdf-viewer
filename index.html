@@ -3,129 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart E-Book Viewer 2026</title>
-    
+    <title>My Smart E-Book</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121214">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     
     <style>
-        :root {
-            --bg-color: #121214;
-            --ui-bg: rgba(20, 20, 20, 0.85);
-            --accent: #64c8ff;
-            --text: #ffffff;
-        }
-
-        body {
-            margin: 0; padding: 0;
-            background-color: var(--bg-color); color: var(--text);
-            font-family: 'Malgun Gothic', sans-serif;
-            overflow: hidden;
-            height: 100vh; width: 100vw;
-            display: flex; flex-direction: column;
-        }
-
-        #book-container {
-            flex: 1;
-            width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            position: relative;
-            z-index: 1;
-            padding: 20px; /* 여백 추가 */
-            box-sizing: border-box;
-        }
-
-        /* 책 그림자 효과 추가 */
-        .stf__wrapper {
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        #ui-controls {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            padding: 20px 10px 30px 10px;
-            display: flex; flex-direction: column; gap: 10px;
-            z-index: 10;
-            transition: transform 0.3s ease;
-            box-sizing: border-box;
-        }
-
-        #ui-controls.hidden { transform: translateY(100%); }
-
-        .control-row {
-            display: flex; justify-content: space-between; align-items: center; width: 100%;
-            padding: 0 10px; box-sizing: border-box;
-        }
-
-        #page-slider {
-            width: 100%; height: 6px; -webkit-appearance: none;
-            background: rgba(255,255,255,0.3); border-radius: 3px; outline: none;
-        }
-        #page-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 20px; height: 20px;
-            background: var(--accent); border-radius: 50%; cursor: pointer;
-            box-shadow: 0 0 10px rgba(100,200,255,0.5);
-        }
-
-        #page-info { font-size: 14px; color: #ddd; font-weight: bold; }
+        :root { --bg-color: #121214; --ui-bg: rgba(20, 20, 20, 0.85); --accent: #64c8ff; --text: #ffffff; }
         
-        .btn-icon {
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-            color: white; border-radius: 5px; padding: 5px 10px; font-size: 14px;
-            cursor: pointer;
+        body { 
+            margin: 0; padding: 0; 
+            background-color: var(--bg-color); color: var(--text); 
+            font-family: 'Malgun Gothic', sans-serif; 
+            overflow: hidden; /* 스크롤바 원천 차단 */
+            height: 100vh; width: 100vw; 
+            display: flex; flex-direction: column; 
         }
 
-        #start-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-color); z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .btn-upload {
-            background-color: var(--accent); color: #000; border: none;
-            padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 50px;
-            box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
-        }
-        #loading {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            display: none; z-index: 90; font-size: 18px; color: var(--accent);
-            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px;
+        /* 책 컨테이너: 전체화면 시 중앙 정렬 및 넘침 방지 */
+        #book-container { 
+            flex: 1; 
+            width: 100%; height: 100%; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; 
+            position: relative; 
+            z-index: 1; 
         }
 
-        #zoom-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 999; display: none;
-            overflow: hidden;
+        /* 전체화면 모드일 때 배경을 확실하게 처리 */
+        #book-container:fullscreen {
+            background-color: var(--bg-color);
+            width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
         }
+
+        .stf__wrapper { box-shadow: 0 0 30px rgba(0,0,0,0.6); }
+
+        #ui-controls { position: fixed; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 20px 10px 30px 10px; display: flex; flex-direction: column; gap: 10px; z-index: 10; transition: transform 0.3s ease; box-sizing: border-box; }
+        #ui-controls.hidden { transform: translateY(100%); }
+        .control-row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 10px; box-sizing: border-box; }
+        #page-slider { width: 100%; height: 6px; -webkit-appearance: none; background: rgba(255,255,255,0.3); border-radius: 3px; outline: none; cursor: pointer; }
+        #page-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px rgba(100,200,255,0.5); }
+        #page-info { font-size: 14px; color: #ddd; font-weight: bold; }
+        .btn-icon { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 5px; padding: 5px 10px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .btn-icon:hover { background: rgba(255,255,255,0.2); }
+
+        #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-upload { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; box-shadow: 0 0 20px rgba(100, 200, 255, 0.4); margin-bottom: 20px; cursor: pointer; transition: transform 0.1s; }
+        .btn-upload:active { transform: scale(0.95); }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 90; font-size: 18px; color: var(--accent); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; }
+        
+        #zoom-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 999; display: none; overflow: hidden; }
         #zoom-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         #zoom-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #zoom-close-btn { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; border: 2px solid white; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; }
+        #zoom-hint { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #aaa; font-size: 12px; pointer-events: none; }
         
-        #zoom-close-btn {
-            position: absolute; top: 20px; right: 20px;
-            background: rgba(0,0,0,0.5); color: white; border: 2px solid white;
-            width: 40px; height: 40px; border-radius: 50%; font-size: 20px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 1000;
-        }
-        #zoom-hint {
-            position: absolute; bottom: 20px; width: 100%; text-align: center;
-            color: #aaa; font-size: 12px; pointer-events: none;
-        }
-
+        #btn-reset { position: absolute; top: 10px; right: 10px; z-index: 101; background: #ff4444; border:none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; display: none; font-size: 12px;}
     </style>
 </head>
 <body>
 
+    <button id="btn-reset">다른 책 열기</button>
+
     <div id="start-screen">
-        <h2 style="color:var(--accent); margin-bottom: 10px;">Smart Viewer 2026</h2>
-        <p style="color:#888; margin-bottom: 40px; font-size: 14px;">화면을 두 번 탭하면 확대됩니다.</p>
+        <h2 style="color:var(--accent); margin-bottom: 10px;">Smart Library</h2>
+        <p style="color:#888; margin-bottom: 40px; font-size: 14px;">한 번 열면 앱에 저장됩니다.</p>
         <input type="file" id="file-input" accept="application/pdf" style="display: none;">
-        <button class="btn-upload" onclick="document.getElementById('file-input').click()">PDF 파일 열기</button>
+        <button class="btn-upload" onclick="document.getElementById('file-input').click()">PDF 파일 선택</button>
+        <p style="font-size: 12px; color: #555;">(저장된 데이터는 브라우저에 남습니다)</p>
     </div>
 
-    <div id="loading">페이지 변환 중...</div>
+    <div id="loading">로딩 중...</div>
 
     <div id="book-container">
         <div id="flipbook"></div>
@@ -143,15 +96,47 @@
 
     <div id="zoom-layer">
         <div id="zoom-close-btn">✕</div>
-        <div id="zoom-container">
-            <img id="zoom-img" src="" alt="Zoom Image">
-        </div>
+        <div id="zoom-container"><img id="zoom-img" src="" alt="Zoom Image"></div>
         <div id="zoom-hint">두 손가락으로 확대/이동 가능</div>
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fail:', err));
+        }
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+        // === DB Logic (동일) ===
+        const DB_NAME = "EbookDB"; const STORE_NAME = "files";
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e);
+            });
+        }
+        async function saveFileToDB(fileData) {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).put(fileData, "currentBook");
+            return new Promise((resolve) => tx.oncomplete = resolve);
+        }
+        async function loadFileFromDB() {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const req = tx.objectStore(STORE_NAME).get("currentBook");
+            return new Promise((resolve) => { req.onsuccess = () => resolve(req.result); });
+        }
+        async function clearDB() {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).delete("currentBook");
+            return new Promise((resolve) => tx.oncomplete = resolve);
+        }
+
+        // === Main Logic ===
         const els = {
             fileInput: document.getElementById('file-input'),
             startScreen: document.getElementById('start-screen'),
@@ -164,32 +149,45 @@
             btnFullscreen: document.getElementById('btn-fullscreen'),
             zoomLayer: document.getElementById('zoom-layer'),
             zoomImg: document.getElementById('zoom-img'),
-            zoomClose: document.getElementById('zoom-close-btn')
+            zoomClose: document.getElementById('zoom-close-btn'),
+            btnReset: document.getElementById('btn-reset')
         };
 
-        let pageFlip;
-        let totalPages = 0;
-        let pdfDoc = null;
-        let zoomInstance = null;
-        let lastTap = 0;
+        let pageFlip, totalPages = 0, pdfDoc = null, zoomInstance = null, lastTap = 0, pdfOriginalRatio = 0.7;
 
-        // PDF 원본 비율 저장용 변수
-        let pdfOriginalRatio = 0.7; // 기본값 (A4 비율 근사치)
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedData = await loadFileFromDB();
+            if (savedData) {
+                els.startScreen.style.display = 'none';
+                els.loading.style.display = 'block';
+                els.btnReset.style.display = 'block';
+                await loadPDF(savedData);
+            }
+        });
 
         els.fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
+            const data = await file.arrayBuffer();
             els.startScreen.style.display = 'none';
             els.loading.style.display = 'block';
-            await loadPDF(await file.arrayBuffer());
+            els.loading.innerText = "파일 저장 중...";
+            await saveFileToDB(data);
+            els.btnReset.style.display = 'block';
+            await loadPDF(data);
+        });
+
+        els.btnReset.addEventListener('click', async () => {
+            if(confirm("현재 책을 닫고 새로운 파일을 여시겠습니까?")) {
+                await clearDB();
+                location.reload();
+            }
         });
 
         function splitCanvas(original) {
             const w = original.width, h = original.height, halfW = Math.floor(w / 2);
-            const ctx = original.getContext('2d');
             const l = document.createElement('canvas'), r = document.createElement('canvas');
-            l.width = halfW; l.height = h;
-            r.width = halfW; r.height = h;
+            l.width = halfW; l.height = h; r.width = halfW; r.height = h;
             l.getContext('2d').drawImage(original, 0, 0, halfW, h, 0, 0, halfW, h);
             r.getContext('2d').drawImage(original, halfW, 0, halfW, h, 0, 0, halfW, h);
             return [l, r];
@@ -199,176 +197,147 @@
             try {
                 pdfDoc = await pdfjsLib.getDocument(data).promise;
                 const fragment = document.createDocumentFragment();
-
-                // 첫 페이지를 미리 로드하여 비율 계산
                 const firstPage = await pdfDoc.getPage(1);
                 const firstViewport = firstPage.getViewport({ scale: 1.0 });
-                
-                // 가로형인지 세로형인지에 따라 기준 비율 설정
-                if (firstViewport.width > firstViewport.height * 1.1) {
-                    // 두 페이지 보기(가로형 PDF)의 경우 반을 자르므로, 한 페이지 비율은 (width/2) / height
-                    pdfOriginalRatio = (firstViewport.width / 2) / firstViewport.height;
-                } else {
-                    pdfOriginalRatio = firstViewport.width / firstViewport.height;
-                }
+                pdfOriginalRatio = (firstViewport.width > firstViewport.height * 1.1) ? (firstViewport.width / 2) / firstViewport.height : firstViewport.width / firstViewport.height;
 
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     const page = await pdfDoc.getPage(i);
-                    // 스케일은 화질을 위해 1.5~2.0 유지 (너무 크면 모바일에서 렉 발생 가능성 있으므로 1.5 권장)
                     const viewport = page.getViewport({ scale: 1.5 }); 
                     const canvas = document.createElement('canvas');
                     canvas.width = viewport.width; canvas.height = viewport.height;
-                    
                     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
 
                     if (viewport.width > viewport.height * 1.1) {
                         const [l, r] = splitCanvas(canvas);
                         l.classList.add('page-canvas'); r.classList.add('page-canvas');
-                        l.dataset.pdfIdx = i; r.dataset.pdfIdx = i; 
-                        fragment.appendChild(l); fragment.appendChild(r);
+                        l.dataset.pdfIdx = i; r.dataset.pdfIdx = i; fragment.appendChild(l); fragment.appendChild(r);
                     } else {
-                        canvas.classList.add('page-canvas');
-                        canvas.dataset.pdfIdx = i;
-                        fragment.appendChild(canvas);
+                        canvas.classList.add('page-canvas'); canvas.dataset.pdfIdx = i; fragment.appendChild(canvas);
                     }
                     els.loading.innerText = `변환 중... (${i}/${pdfDoc.numPages})`;
                 }
-                
                 els.flipbook.appendChild(fragment);
                 els.loading.style.display = 'none';
-                
-                // 렌더링 완료 후 플립북 초기화
                 initFlipBook();
-
             } catch (e) {
                 console.error(e);
-                alert("PDF 로딩 실패: " + e.message);
-                els.startScreen.style.display = 'flex'; els.loading.style.display = 'none';
+                alert("오류: " + e.message);
+                await clearDB();
+                location.reload();
             }
         }
 
         function initFlipBook() {
-            // [중요] 컨테이너 크기 기반으로 최적의 책 크기 계산
-            const containerW = els.bookContainer.clientWidth - 40; // 좌우 패딩 고려
-            const containerH = els.bookContainer.clientHeight - 40; // 상하 패딩 고려
+            // [수정] 전체화면 시 여백 계산을 더 정밀하게 함
+            const isFullscreen = document.fullscreenElement !== null;
+            
+            // 여백: 전체화면이면 20, 아니면 40 (UI 공간 확보)
+            const padding = isFullscreen ? 20 : 40; 
+            
+            const containerW = els.bookContainer.clientWidth - padding;
+            const containerH = els.bookContainer.clientHeight - padding;
 
-            // 비율에 맞춰 width, height 계산 (Fit Logic)
             let bookH = containerH;
             let bookW = bookH * pdfOriginalRatio;
 
-            // 만약 계산된 너비가 컨테이너보다 크면, 너비 기준으로 높이 재조정
-            if (bookW > containerW) {
-                bookW = containerW;
-                bookH = bookW / pdfOriginalRatio;
+            // 컨테이너 너비를 넘어가면 너비 기준으로 높이 재조정
+            if (bookW > containerW) { 
+                bookW = containerW; 
+                bookH = bookW / pdfOriginalRatio; 
             }
 
-            pageFlip = new St.PageFlip(els.flipbook, {
-                width: bookW,     // 계산된 너비
-                height: bookH,    // 계산된 높이
-                size: "fixed",    // 'stretch' 대신 'fixed'를 사용하여 계산된 크기 강제
-                // 모바일에서도 한 페이지씩 보기 위해 usePortrait: true 유지
-                usePortrait: true,
-                maxShadowOpacity: 0.5,
-                autoSize: true    // 캔버스 크기를 설정된 width/height에 맞춤
+            // 소수점 픽셀로 인한 미세한 스크롤 방지를 위해 floor 사용
+            bookW = Math.floor(bookW);
+            bookH = Math.floor(bookH);
+
+            pageFlip = new St.PageFlip(els.flipbook, { 
+                width: bookW, 
+                height: bookH, 
+                size: "fixed", 
+                usePortrait: true, 
+                maxShadowOpacity: 0.5, 
+                autoSize: true 
             });
 
             pageFlip.loadFromHTML(els.flipbook.querySelectorAll('.page-canvas'));
             totalPages = pageFlip.getPageCount();
             els.slider.max = totalPages - 1;
-
-            pageFlip.on('flip', (e) => {
-                els.pageInfo.innerText = `${e.data + 1} / ${totalPages}`;
-                els.slider.value = e.data;
+            
+            pageFlip.on('flip', (e) => { 
+                els.pageInfo.innerText = `${e.data + 1} / ${totalPages}`; 
+                els.slider.value = e.data; 
             });
-
+            
             els.slider.addEventListener('input', (e) => pageFlip.flip(parseInt(e.target.value)));
             els.bookContainer.addEventListener('touchend', handleTouch);
             els.bookContainer.addEventListener('click', handleTouch);
         }
 
         function handleTouch(e) {
-            if (e.target.closest('#ui-controls')) return;
-
+            if (e.target.closest('#ui-controls') || e.target.closest('#btn-reset')) return;
             const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            
-            if (tapLength < 300 && tapLength > 0) {
-                openZoomView();
-                e.preventDefault();
-            } else {
-                setTimeout(() => {
-                    if (new Date().getTime() - lastTap > 350) {
-                         els.ui.classList.toggle('hidden');
-                    }
-                }, 350);
-            }
+            if (currentTime - lastTap < 300 && currentTime - lastTap > 0) { openZoomView(); e.preventDefault(); } 
+            else { setTimeout(() => { if (new Date().getTime() - lastTap > 350) els.ui.classList.toggle('hidden'); }, 350); }
             lastTap = currentTime;
         }
 
         function openZoomView() {
             const currentIdx = pageFlip.getCurrentPageIndex();
             const pages = els.flipbook.querySelectorAll('.page-canvas');
-            // pageFlip은 내부적으로 페이지 순서를 관리하므로 현재 인덱스로 접근
-            // (주의: HTML 구조에 따라 쿼리가 달라질 수 있으나, 위 로직상 순서대로 append 됨)
-            // St.PageFlip은 내부 wrapper를 만들지만 원본 캔버스 데이터는 유지됨
-            
-            // 현재 보여지는 페이지 찾기 (pageFlip API 활용)
-            // 줌 기능은 원본 고화질 캔버스를 데이터 URL로 변환하여 보여줌
-            
-            // 만약 pageFlip 인스턴스에서 직접 돔을 가져올 수 있다면 더 정확함
-            // 여기서는 심플하게 전체 캔버스 리스트에서 인덱스로 접근
             if (pages[currentIdx]) {
                 els.zoomImg.src = pages[currentIdx].toDataURL();
                 els.zoomLayer.style.display = 'block';
-                
                 if (zoomInstance) zoomInstance.dispose();
-                const elem = document.getElementById('zoom-container');
-                zoomInstance = Panzoom(elem, {
-                    maxScale: 5, minScale: 1, contain: 'outside'
-                });
-                elem.addEventListener('wheel', zoomInstance.zoomWithWheel);
+                zoomInstance = Panzoom(document.getElementById('zoom-container'), { maxScale: 5, minScale: 1, contain: 'outside' });
+                document.getElementById('zoom-container').addEventListener('wheel', zoomInstance.zoomWithWheel);
             }
         }
-
-        function closeZoom() {
-            els.zoomLayer.style.display = 'none';
-            if (zoomInstance) {
-                zoomInstance.dispose();
-                zoomInstance = null;
+        
+        els.zoomClose.addEventListener('click', () => { els.zoomLayer.style.display = 'none'; if(zoomInstance) zoomInstance.dispose(); });
+        els.zoomLayer.addEventListener('touchend', () => { if (new Date().getTime() - lastTap < 300) els.zoomClose.click(); lastTap = new Date().getTime(); });
+        
+        // [수정] 전체화면 버튼 로직
+        els.btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) { 
+                // 컨테이너만 전체화면이 아니라 문서 전체를 전체화면으로 (호환성 UP)
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+                els.btnFullscreen.innerText = "축소"; 
+            } else { 
+                if(document.exitFullscreen) document.exitFullscreen(); 
+                els.btnFullscreen.innerText = "전체화면"; 
             }
-        }
-
-        els.zoomClose.addEventListener('click', closeZoom);
-        els.zoomLayer.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            if (currentTime - lastTap < 300) closeZoom();
-            lastTap = currentTime;
         });
 
-        els.btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
+        // [중요] 전체화면 상태 변경 감지 리스너 (화면 크기 재계산 트리거)
+        document.addEventListener('fullscreenchange', () => {
+            // 브라우저 렌더링이 완료된 후 실행하기 위해 약간의 지연(100ms) 추가
+            setTimeout(() => {
+                reloadBookSize();
+            }, 100);
+            
+            // 버튼 텍스트 동기화
+            if (document.fullscreenElement) {
                 els.btnFullscreen.innerText = "축소";
             } else {
-                if(document.exitFullscreen) document.exitFullscreen();
                 els.btnFullscreen.innerText = "전체화면";
             }
         });
-
-        // 리사이즈 시 책 크기 재계산 (반응형 대응)
+        
+        // [중요] 리사이즈/전체화면 시 책 크기 다시 맞추는 함수 분리
         let resizeTimeout;
+        function reloadBookSize() {
+            if (pageFlip) { 
+                const idx = pageFlip.getCurrentPageIndex(); 
+                pageFlip.destroy(); // 기존 인스턴스 제거
+                initFlipBook();     // 현재 화면 크기에 맞춰 재생성
+                pageFlip.turnToPage(idx); // 읽던 페이지 복구
+            }
+        }
+
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (pageFlip) {
-                    // 리사이즈 시 파괴 후 재생성이 가장 깔끔함 (좌표 틀어짐 방지)
-                    // 현재 상태 저장
-                    const currentIdx = pageFlip.getCurrentPageIndex();
-                    pageFlip.destroy();
-                    initFlipBook();
-                    pageFlip.turnToPage(currentIdx); // 원래 페이지로 복구
-                }
-            }, 500);
+            resizeTimeout = setTimeout(reloadBookSize, 300);
         });
 
     </script>
