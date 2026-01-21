@@ -33,10 +33,8 @@
             touch-action: none; 
         }
         
-        /* 전체화면 시 배경 확실하게 고정 */
         body:fullscreen, #book-container:fullscreen {
-            background: #000; /* 전체화면은 완전 몰입을 위해 블랙 */
-            width: 100vw; height: 100vh;
+            background: #000; width: 100vw; height: 100vh;
         }
 
         #book-container { 
@@ -47,7 +45,6 @@
         
         .stf__wrapper { box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
         
-        /* UI 컨트롤 */
         #ui-controls { 
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px;
             background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -60,7 +57,6 @@
         
         .control-row { display: flex; justify-content: center; align-items: center; width: 100%; position: relative;}
         
-        /* 전체화면 버튼 */
         #btn-fullscreen-toggle {
             position: absolute; right: 0; top: 50%; transform: translateY(-50%);
             background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
@@ -109,8 +105,8 @@
 
     <div id="guide-popup">
         <span class="guide-icon">👆</span>
-        <div class="guide-text">좌/우 클릭: <span class="highlight">페이지 넘김</span><br>중앙 더블클릭: <span class="highlight">확대</span></div>
-        <div class="guide-sub">PC: 중앙 클릭 시 방해없음<br>모바일: 위로 쓸어올려 메뉴 열기</div>
+        <div class="guide-text">PC: 중앙 더블클릭 확대<br>모바일: 터치로 넘김</div>
+        <div class="guide-sub">화면 크기에 맞춰<br>자동으로 최적화됩니다.</div>
         <button class="btn-confirm" id="btn-guide-close">확인했습니다</button>
     </div>
 
@@ -121,7 +117,7 @@
 
     <div id="start-screen">
         <h2 style="background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px; font-size: 32px; letter-spacing: -1px;">Smart Library</h2>
-        <p style="color:rgba(255,255,255,0.5); margin-bottom: 50px; font-size: 15px;">기록은 이 기기에 안전하게 저장됩니다.</p>
+        <p style="color:rgba(255,255,255,0.5); margin-bottom: 50px; font-size: 15px;">PC/모바일 반응형 뷰어</p>
         <input type="file" id="file-input" accept="application/pdf" style="display: none;">
         <button class="btn-upload" onclick="document.getElementById('file-input').click()">PDF 불러오기</button>
     </div>
@@ -170,7 +166,7 @@
             btnFullscreen: document.getElementById('btn-fullscreen-toggle')
         };
 
-        let allPages=[], pageFlip, totalPages=0, currentPDFData=null, zoomInstance=null, pdfOriginalRatio=0.7;
+        let allPages=[], pageFlip, totalPages=0, currentPDFData=null, zoomInstance=null, singlePageRatio=0.7;
         let touchStartX=0, touchStartY=0, longPressTimer=null, isFlipCooldown=false, lastTouchTime=0;
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -192,7 +188,6 @@
         }
 
         els.btnReset.addEventListener('click', async()=>{ if(confirm("초기화하시겠습니까?")){ await clearDB(); location.reload(); } });
-
         els.btnGuideClose.addEventListener('click', (e) => { e.stopPropagation(); els.guidePopup.style.display = 'none'; });
         els.guidePopup.addEventListener('touchstart', (e) => e.stopPropagation());
         els.guidePopup.addEventListener('click', (e) => e.stopPropagation());
@@ -222,12 +217,15 @@
             try {
                 allPages = []; els.flipbook.innerHTML = "";
                 const pdfDoc = await pdfjsLib.getDocument(data).promise;
-                const fragment = document.createDocumentFragment();
-                const firstPage = await pdfDoc.getPage(1);
-                const firstViewport = firstPage.getViewport({ scale: 1.0 });
-                pdfOriginalRatio = (firstViewport.width > firstViewport.height * 1.1) 
-                    ? (firstViewport.width / 2) / firstViewport.height 
-                    : firstViewport.width / firstViewport.height;
+                const p1 = await pdfDoc.getPage(1);
+                const v1 = p1.getViewport({ scale: 1.0 });
+                
+                // [수정] 단일 페이지 비율 계산 (펼침면이면 반으로 나눈 비율)
+                if(v1.width > v1.height * 1.2) {
+                    singlePageRatio = (v1.width / 2) / v1.height;
+                } else {
+                    singlePageRatio = v1.width / v1.height;
+                }
 
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     const page = await pdfDoc.getPage(i);
@@ -240,7 +238,6 @@
 
                     if (viewport.width > viewport.height * 1.2) {
                         const [l, r] = splitCanvas(canvas);
-                        l.classList.add('page-canvas'); r.classList.add('page-canvas');
                         l.dataset.pdfIdx = i; r.dataset.pdfIdx = i;
                         allPages.push(l); allPages.push(r);
                     } else {
@@ -268,32 +265,40 @@
         }
 
         function initFlipBook() {
-            const isLandscape = window.innerWidth > window.innerHeight;
-            const padding = isLandscape ? 50 : 0; 
+            // [중요] 반응형 처리: PC(가로김) vs 모바일(세로김)
+            const isLandscapeScreen = window.innerWidth > window.innerHeight;
+            
+            const padding = isLandscapeScreen ? 60 : 30; // PC는 여유 있게
             const containerW = els.bookContainer.clientWidth - padding;
             const containerH = els.bookContainer.clientHeight - padding;
             
-            // [검은 화면 수정] 컨테이너 크기가 비정상일 때 방어
-            if (containerW <= 0 || containerH <= 0) {
-                setTimeout(initFlipBook, 100);
-                return;
-            }
+            if (containerW <= 0 || containerH <= 0) { setTimeout(initFlipBook, 100); return; }
+
+            // [핵심] 모바일은 1쪽 보기(Portrait: true), PC는 2쪽 보기(Portrait: false)
+            const usePortrait = !isLandscapeScreen;
 
             let bookH = containerH;
-            let bookW = 0;
+            // PC면 2쪽 너비, 모바일이면 1쪽 너비 계산
+            let bookW = usePortrait ? (bookH * singlePageRatio) : (bookH * singlePageRatio * 2);
 
-            if (isLandscape) {
-                bookW = (bookH * pdfOriginalRatio) * 2;
-                if (bookW > containerW) { bookW = containerW; bookH = (bookW / 2) / pdfOriginalRatio; }
-            } else {
-                bookW = containerW; bookH = bookW / pdfOriginalRatio;
-                if (bookH > containerH) { bookH = containerH; bookW = bookH * pdfOriginalRatio; }
+            // 컨테이너보다 크면 줄이기
+            if (bookW > containerW) {
+                bookW = containerW;
+                bookH = usePortrait ? (bookW / singlePageRatio) : (bookW / 2 / singlePageRatio);
             }
-            bookW = Math.floor(bookW); bookH = Math.floor(bookH);
+
+            // 정수화 (렌더링 깨짐 방지)
+            bookW = Math.floor(bookW);
+            bookH = Math.floor(bookH);
 
             pageFlip = new St.PageFlip(els.flipbook, {
-                width: bookW, height: bookH, size: 'fixed',
-                usePortrait: !isLandscape, maxShadowOpacity: 0.5, autoSize: true, showCover: true
+                width: bookW, 
+                height: bookH, 
+                size: 'fixed',
+                usePortrait: usePortrait,  // [반응형 스위치]
+                maxShadowOpacity: 0.5, 
+                autoSize: true,
+                showCover: true // 첫 페이지 커버 처리 (PC에서 1페이지 우측 배치)
             });
 
             pageFlip.loadFromHTML(allPages);
@@ -319,7 +324,7 @@
             });
         }
 
-        // === [이벤트 및 제스처 로직] ===
+        // === 제스처 ===
         function safeFlip(direction) {
             if (isFlipCooldown) return; 
             isFlipCooldown = true;
@@ -328,7 +333,6 @@
             setTimeout(() => { isFlipCooldown = false; }, 800);
         }
 
-        // 모바일 터치
         function handleTouchStart(e) {
             if (e.target.closest('#ui-controls') || e.target.closest('#guide-popup')) return;
             touchStartX = e.changedTouches[0].screenX;
@@ -337,8 +341,7 @@
             longPressTimer = setTimeout(() => {
                 if(navigator.vibrate) navigator.vibrate(50);
                 const touchX = e.touches[0].clientX;
-                if (touchX > window.innerWidth / 2) safeFlip('next');
-                else safeFlip('prev');
+                if (touchX > window.innerWidth / 2) safeFlip('next'); else safeFlip('prev');
             }, 500);
         }
 
@@ -347,39 +350,27 @@
             clearTimeout(longPressTimer); 
             e.preventDefault(); 
             lastTouchTime = Date.now();
-            const touchEndX = e.changedTouches[0].screenX;
-            const touchEndY = e.changedTouches[0].screenY;
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
-
-            // 스와이프
-            if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 50){ 
-                if (diffY < 0) els.ui.classList.remove('hidden'); 
-                else els.ui.classList.add('hidden'); 
+            const tX=e.changedTouches[0].screenX, tY=e.changedTouches[0].screenY; 
+            const dX=tX-touchStartX, dY=tY-touchStartY;
+            if (Math.abs(dY)>Math.abs(dX) && Math.abs(dY)>50){ 
+                if (dY<0) els.ui.classList.remove('hidden'); else els.ui.classList.add('hidden'); 
                 return; 
             }
-            // 탭 (모바일은 중앙 탭도 그냥 넘김 or 메뉴, 여기선 넘김 유지)
-            if (Math.abs(diffX) < 20 && Math.abs(diffY) < 20){
+            if (Math.abs(dX)<20&&Math.abs(dY)<20){
                 if(touchStartX > window.innerWidth/2) safeFlip('next'); else safeFlip('prev');
             }
         }
 
-        // [PC 마우스 로직 수정] 중앙 클릭 시 아무것도 안 함 (더블클릭 방해 방지)
+        // [PC 클릭] 중앙 무시 (더블클릭용)
         function handleMouseDown(e) {
-            if (Date.now()-lastTouchTime<1000) return; // 모바일 터치 후 PC클릭 이벤트 방지
+            if (Date.now()-lastTouchTime<1000) return;
             if (e.target.closest('#ui-controls') || e.target.closest('#guide-popup')) return;
             
             const width = window.innerWidth;
             const x = e.clientX;
-
-            // 좌측 30%: 이전, 우측 30%: 다음, 중앙 40%: 무시(Safe Zone)
-            if (x < width * 0.3) {
-                safeFlip('prev');
-            } else if (x > width * 0.7) {
-                safeFlip('next');
-            } else {
-                // 중앙 클릭은 무시 (더블클릭을 위해)
-            }
+            // 좌 30% / 우 30% 만 작동
+            if (x < width * 0.3) safeFlip('prev');
+            else if (x > width * 0.7) safeFlip('next');
         }
 
         document.addEventListener('keydown', (e) => { 
@@ -388,10 +379,10 @@
             if (e.key === "ArrowLeft") safeFlip('prev'); 
         });
         
-        // 줌 기능
         function openZoomView() {
             const currentIdx = pageFlip.getCurrentPageIndex();
-            const p = allPages[currentIdx];
+            // 현재 보이는 페이지 중 하나 가져오기 (PC는 2쪽이라 보정 필요할 수 있음)
+            const p = allPages[currentIdx]; 
             if(p){
                 els.zoomImg.src = p.toDataURL();
                 els.zoomLayer.style.display='block';
@@ -402,26 +393,22 @@
         }
         els.zoomClose.addEventListener('click',(e)=>{e.stopPropagation();els.zoomLayer.style.display='none';});
 
-        // 전체화면 토글 및 재렌더링
         els.btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else if (document.exitFullscreen) document.exitFullscreen();
         });
 
-        // [중요] 전체화면 변경 시 리사이징 처리
-        document.addEventListener('fullscreenchange', () => {
-            els.btnFullscreen.innerText = document.fullscreenElement ? "축소" : "전체화면";
-            // 애니메이션 딜레이 후 리로드
-            setTimeout(reloadBook, 200); 
-        });
-
+        // 화면 크기 변경 시 리로드 (PC<->모바일, 전체화면)
         let rt;
         window.addEventListener('resize',()=>{ 
             clearTimeout(rt); 
             rt=setTimeout(reloadBook, 300); 
+        });
+        
+        // 전체화면 변경 시 약간의 딜레이 후 리로드 (검은 화면 방지)
+        document.addEventListener('fullscreenchange', () => {
+            els.btnFullscreen.innerText = document.fullscreenElement ? "축소" : "전체화면";
+            setTimeout(reloadBook, 200); 
         });
 
         function reloadBook() {
@@ -431,7 +418,6 @@
                 els.flipbook.innerHTML='';
                 allPages.forEach(p=>els.flipbook.appendChild(p));
                 initFlipBook();
-                // 잠시 후 페이지 복구 (초기화 안정성 확보)
                 setTimeout(() => { if(idx < pageFlip.getPageCount()) pageFlip.turnToPage(idx); }, 50);
             }
         }
@@ -469,19 +455,18 @@ window.addEventListener('DOMContentLoaded', ()=>{
  loadPDF(bytes.buffer);
 });
 const els={loading:document.getElementById('loading'),bookContainer:document.getElementById('book-container'),flipbook:document.getElementById('flipbook'),ui:document.getElementById('ui-controls'),slider:document.getElementById('page-slider'),pageInfo:document.getElementById('page-info'),zoomLayer:document.getElementById('zoom-layer'),zoomImg:document.getElementById('zoom-img'),zoomClose:document.getElementById('zoom-close-btn'),guidePopup:document.getElementById('guide-popup')};
-let allPages=[],pageFlip,totalPages=0,touchStartX=0,touchStartY=0,longPressTimer=null,isFlipCooldown=false,zoomInstance=null,pdfOriginalRatio=0.7,lastTouchTime=0;
+let allPages=[],pageFlip,totalPages=0,touchStartX=0,touchStartY=0,longPressTimer=null,isFlipCooldown=false,zoomInstance=null,singlePageRatio=0.7,lastTouchTime=0;
 function saveLastPage(i){localStorage.setItem("lastPage",i);} function getLastPage(){return parseInt(localStorage.getItem("lastPage"))||0;}
-function splitCanvas(o){const w=o.width,h=o.height,hw=Math.floor(w/2);const l=document.createElement('canvas'),r=document.createElement('canvas');l.width=hw;l.height=h;r.width=w-hw;r.height=h;l.getContext('2d').drawImage(o,0,0,hw,h,0,0,hw,h);r.getContext('2d').drawImage(o,hw,0,w-hw,h,0,0,w-hw,h);return[l,r];}
-async function loadPDF(d){try{const pdf=await pdfjsLib.getDocument(d).promise;const frag=document.createDocumentFragment();const p1=await pdf.getPage(1);const v1=p1.getViewport({scale:1.0});pdfOriginalRatio=(v1.width>v1.height*1.1)?(v1.width/2)/v1.height:v1.width/v1.height;for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const v=p.getViewport({scale:2.0});const c=document.createElement('canvas');c.width=v.width;c.height=v.height;const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);await p.render({canvasContext:ctx,viewport:v}).promise;if(v.width>v.height*1.2){const[l,r]=splitCanvas(c);l.classList.add('page-canvas');r.classList.add('page-canvas');l.dataset.pdfIdx=i;r.dataset.pdfIdx=i;allPages.push(l);allPages.push(r);frag.appendChild(l);frag.appendChild(r);}else{c.classList.add('page-canvas');c.dataset.pdfIdx=i;allPages.push(c);frag.appendChild(c);}els.loading.innerHTML='<div>🔮</div> ('+i+'/'+pdf.numPages+')';}els.flipbook.appendChild(frag);els.loading.style.display='none';initFlipBook();setTimeout(()=>{els.guidePopup.style.display='block';},500);}catch(e){alert('Err: '+e.message);}}
+function splitCanvas(o){const w=o.width,h=o.height,hw=Math.floor(w/2);const l=document.createElement('canvas'),r=document.createElement('canvas');l.width=hw;l.height=h;r.width=hw;r.height=h;l.getContext('2d').drawImage(o,0,0,hw,h,0,0,hw,h);r.getContext('2d').drawImage(o,hw,0,hw,h,0,0,hw,h);return[l,r];}
+async function loadPDF(d){try{const pdf=await pdfjsLib.getDocument(d).promise;const p1=await pdf.getPage(1);const v1=p1.getViewport({scale:1.0});if(v1.width>v1.height*1.2){singlePageRatio=(v1.width/2)/v1.height;}else{singlePageRatio=v1.width/v1.height;}for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const v=p.getViewport({scale:2.0});const c=document.createElement('canvas');c.width=v.width;c.height=v.height;const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);await p.render({canvasContext:ctx,viewport:v}).promise;if(v.width>v.height*1.2){const[l,r]=splitCanvas(c);l.dataset.pdfIdx=i;r.dataset.pdfIdx=i;allPages.push(l);allPages.push(r);}else{c.classList.add('page-canvas');c.dataset.pdfIdx=i;allPages.push(c);}els.loading.innerHTML='<div>🔮</div> ('+i+'/'+pdf.numPages+')';}els.flipbook.innerHTML='';allPages.forEach(p=>els.flipbook.appendChild(p));els.loading.style.display='none';initFlipBook();setTimeout(()=>{els.guidePopup.style.display='block';},500);}catch(e){alert('Err: '+e.message);}}
 function initFlipBook(){
- const isLand=window.innerWidth>window.innerHeight; const pad=isLand?50:0;
+ const isLand=window.innerWidth>window.innerHeight; const pad=isLand?60:30;
  const cW=els.bookContainer.clientWidth-pad, cH=els.bookContainer.clientHeight-pad;
  if(cW<=0||cH<=0){setTimeout(initFlipBook,100);return;}
- let bH=cH, bW=0;
- if(isLand){ bW=(bH*pdfOriginalRatio)*2; if(bW>cW){ bW=cW; bH=(bW/2)/pdfOriginalRatio; } }
- else{ bW=cW; bH=bW/pdfOriginalRatio; if(bH>cH){ bH=cH; bW=bH*pdfOriginalRatio; } }
+ const useP=!isLand; let bH=cH; let bW=useP?(bH*singlePageRatio):(bH*singlePageRatio*2);
+ if(bW>cW){bW=cW;bH=useP?(bW/singlePageRatio):(bW/2/singlePageRatio);}
  bW=Math.floor(bW); bH=Math.floor(bH);
- pageFlip=new St.PageFlip(els.flipbook,{width:bW,height:bH,size:'fixed',usePortrait:!isLand,maxShadowOpacity:0.5,autoSize:true,showCover:true});
+ pageFlip=new St.PageFlip(els.flipbook,{width:bW,height:bH,size:'fixed',usePortrait:useP,maxShadowOpacity:0.5,autoSize:true,showCover:true});
  pageFlip.loadFromHTML(allPages); totalPages=pageFlip.getPageCount(); els.slider.max=totalPages-1;
  const lp=getLastPage(); if(lp>0 && lp<totalPages) pageFlip.turnToPage(lp);
  pageFlip.on('flip',(e)=>{els.pageInfo.innerText=(e.data+1)+' / '+totalPages;els.slider.value=e.data;saveLastPage(e.data);});
