@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     
     <style>
-        /* 2026 Future Design System */
+        /* 2026 Future Design Theme */
         :root { 
             --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e); 
             --glass-bg: rgba(20, 20, 28, 0.9);
@@ -21,7 +21,7 @@
             --text: #ffffff;
         }
         
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body { 
             margin: 0; padding: 0; 
@@ -34,17 +34,18 @@
             touch-action: none; 
         }
         
+        body:fullscreen, #book-container:fullscreen { background: #000; width: 100vw; height: 100vh; }
+
         #book-container { 
             flex: 1; width: 100%; height: 100%; 
             display: flex; align-items: center; justify-content: center; 
             overflow: hidden; position: relative; z-index: 1; 
         }
 
-        /* 책 스타일 */
         .stf__wrapper { box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-        .page-canvas { width: 100%; height: 100%; object-fit: contain; } /* 비율 유지 핵심 */
+        .page-canvas { width: 100%; height: 100%; object-fit: contain; }
 
-        /* UI 컨트롤 (하단) */
+        /* UI 컨트롤 (하단) - 모바일에서 가리지 않게 기본적으로 숨김 */
         #ui-controls { 
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); 
             width: 90%; max-width: 500px;
@@ -81,23 +82,22 @@
             -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer;
         }
 
-        /* 시작 화면 */
         #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-gradient); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .btn-main { background: linear-gradient(90deg, #0575E6, #00f260); color: #fff; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(0, 242, 96, 0.4); }
         
         #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 200; color: white; background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; text-align: center; }
 
-        /* 줌 레이어 */
         #zoom-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; display: none; }
         #zoom-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         #zoom-img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #zoom-close { position: absolute; top: 30px; right: 30px; color: white; font-size: 30px; cursor: pointer; z-index: 301; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;}
         
         /* 알림 팝업 */
-        #guide-popup { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; z-index: 150; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+        #guide-popup { position: fixed; top: 80px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 10px; z-index: 150; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity 0.5s; text-align: right; }
         
-        /* 메뉴 토글 버튼 */
-        #menu-toggle { position: fixed; top: 20px; right: 20px; z-index: 150; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
+        /* 메뉴 토글 버튼 (우측 상단) */
+        #menu-toggle { position: fixed; top: 20px; right: 20px; z-index: 150; width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; backdrop-filter: blur(5px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #menu-toggle:active { background: var(--accent); color: #000; transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -113,7 +113,7 @@
             <button class="ui-btn" id="btn-export">공유 파일 저장</button>
             <button class="ui-btn" id="btn-reset">초기화</button>
         </div>
-        <p style="margin-top: 20px; font-size: 13px; color: #aaa;">원본 비율 유지 | 3D 효과 | 클릭 보호</p>
+        <p style="margin-top: 20px; font-size: 13px; color: #aaa;">PC/모바일 분리 모드 | 3D 효과</p>
     </div>
 
     <div id="loading">분석 중...</div>
@@ -141,7 +141,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // === 전역 변수 ===
         const els = {
             fileInput: document.getElementById('file-input'),
             startScreen: document.getElementById('start-screen'),
@@ -166,6 +165,7 @@
         
         let clickTimer = null;
         let isInteracting = false;
+        let isFlipLocked = false;
 
         // DB 관련
         const DB_NAME="EbookDB", STORE_NAME="files";
@@ -191,12 +191,13 @@
             if(confirm('초기화 하시겠습니까?')) { await clearDB(); location.reload(); }
         });
 
+        // [메뉴 버튼] 클릭 시 메뉴 토글
         els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); }
 
         function startViewer(data) {
             els.startScreen.style.display = 'none';
             els.loading.style.display = 'block';
-            els.ui.classList.remove('hidden');
+            els.ui.classList.add('hidden'); // 시작 시 메뉴 숨김
             processPDF(data);
         }
 
@@ -206,7 +207,6 @@
                 const p1 = await pdfDoc.getPage(1);
                 const v1 = p1.getViewport({scale: 1});
                 
-                // [비율 계산] 원본 비율 유지 로직
                 if (v1.width > v1.height * 1.2) {
                     singlePageRatio = (v1.width / 2) / v1.height;
                 } else {
@@ -219,7 +219,7 @@
                 for(let i=1; i<=pdfDoc.numPages; i++) {
                     els.loading.innerText = `생성 중... ${i}/${pdfDoc.numPages}`;
                     const page = await pdfDoc.getPage(i);
-                    const viewport = page.getViewport({scale: 2.0}); // 고화질
+                    const viewport = page.getViewport({scale: 2.0});
                     
                     const canvas = document.createElement('canvas');
                     canvas.width = viewport.width;
@@ -259,7 +259,6 @@
             return [l, r];
         }
 
-        // === [책 생성 - 맨 처음 코드의 비율 계산 로직 적용] ===
         function createFlipBook() {
             if (pageFlip) pageFlip.destroy();
             els.flipbook.innerHTML = "";
@@ -267,9 +266,7 @@
 
             const wrapperW = els.bookContainer.clientWidth;
             const wrapperH = els.bookContainer.clientHeight;
-            
-            // 안전 장치
-            if(wrapperW === 0 || wrapperH === 0) { setTimeout(createFlipBook, 100); return; }
+            if(wrapperW===0 || wrapperH===0) { setTimeout(createFlipBook, 100); return; }
 
             isLandscapeMode = wrapperW > wrapperH; 
             
@@ -279,47 +276,25 @@
 
             let bookW, bookH;
 
-            // [비율 유지 공식]
-            // 화면에 "가득 채우되(Contain)", "비율은 깨지 않음"
+            // [비율 계산]
             if (isLandscapeMode) {
-                // PC: 2쪽 보기 비율
-                const targetRatio = singlePageRatio * 2; 
+                const targetRatio = singlePageRatio * 2;
                 const screenRatio = availW / availH;
-
-                if (screenRatio > targetRatio) {
-                    // 화면이 더 넓음 -> 높이에 맞춤
-                    bookH = availH;
-                    bookW = bookH * targetRatio;
-                } else {
-                    // 화면이 더 좁음 -> 너비에 맞춤
-                    bookW = availW;
-                    bookH = bookW / targetRatio;
-                }
+                if (screenRatio > targetRatio) { bookH = availH; bookW = bookH * targetRatio; } 
+                else { bookW = availW; bookH = bookW / targetRatio; }
             } else {
-                // 모바일: 1쪽 보기 비율
                 const targetRatio = singlePageRatio;
                 const screenRatio = availW / availH;
-
-                if (screenRatio > targetRatio) {
-                    bookH = availH;
-                    bookW = bookH * targetRatio;
-                } else {
-                    bookW = availW;
-                    bookH = bookW / targetRatio;
-                }
+                if (screenRatio > targetRatio) { bookH = availH; bookW = bookH * targetRatio; } 
+                else { bookW = availW; bookH = bookW / targetRatio; }
             }
 
             bookW = Math.floor(bookW);
             bookH = Math.floor(bookH);
 
             pageFlip = new St.PageFlip(els.flipbook, {
-                width: bookW,
-                height: bookH,
-                size: 'fixed', // 늘어남 방지 핵심
-                usePortrait: !isLandscapeMode,
-                maxShadowOpacity: 0.5,
-                autoSize: true,
-                showCover: true
+                width: bookW, height: bookH, size: 'fixed',
+                usePortrait: !isLandscapeMode, maxShadowOpacity: 0.5, autoSize: true, showCover: true
             });
 
             pageFlip.loadFromHTML(document.querySelectorAll(".page-canvas"));
@@ -333,16 +308,20 @@
             });
         }
 
-        // === 리사이즈 ===
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                if(allPages.length > 0) createFlipBook();
-            }, 200);
+            resizeTimer = setTimeout(() => { if(allPages.length > 0) createFlipBook(); }, 200);
         });
 
-        // === 클릭 핸들러 (중앙 클릭 보호 + 더블클릭 줌) ===
+        // 안전 넘김
+        function safeFlip(d) {
+            if(isFlipLocked) return;
+            isFlipLocked = true;
+            if(d==='next') pageFlip.flipNext(); else pageFlip.flipPrev();
+            setTimeout(()=>isFlipLocked=false, 600);
+        }
+
         els.bookContainer.addEventListener('mousedown', handleInputStart);
         els.bookContainer.addEventListener('mouseup', handleInputEnd);
         els.bookContainer.addEventListener('touchstart', handleInputStart, {passive: true});
@@ -364,59 +343,50 @@
             const diff = startX - endX;
             const timeDiff = Date.now() - startTime;
 
-            // 스와이프
             if (Math.abs(diff) > 50 && timeDiff < 300) {
-                if (diff > 0) pageFlip.flipNext();
-                else pageFlip.flipPrev();
+                if (diff > 0) safeFlip('next'); else safeFlip('prev');
                 return;
             }
 
-            // 클릭
             if (Math.abs(diff) < 10 && timeDiff < 300) {
                 const clickY = e.clientY || e.changedTouches[0].clientY;
                 handleSmartClick(endX, clickY);
             }
         }
 
+        // [PC / 모바일 로직 분리]
         function handleSmartClick(x, y) {
-            if (clickTimer) {
-                // 더블 클릭 -> 줌
-                clearTimeout(clickTimer);
-                clickTimer = null;
-                handleZoom(x);
-            } else {
-                // 싱글 클릭 -> 페이지 넘김 (중앙 보호)
+            if (clickTimer) { clearTimeout(clickTimer); clickTimer=null; handleZoom(x); }
+            else {
                 clickTimer = setTimeout(() => {
                     if (isLandscapeMode) {
-                        const w = window.innerWidth;
-                        const h = window.innerHeight;
-                        // [중앙 15% Safe Zone]
+                        // [PC 모드] 중앙 클릭 보호 -> 더블클릭 유도
+                        const w = window.innerWidth, h = window.innerHeight;
                         const lSafe = (x > w*0.15 && x < w*0.35) && (y > h*0.4 && y < h*0.6);
                         const rSafe = (x > w*0.65 && x < w*0.85) && (y > h*0.4 && y < h*0.6);
 
                         if (lSafe || rSafe) {
-                            showToast("더블클릭 영역입니다");
+                            showToast("더블클릭 영역");
                         } else {
-                            if (x < w / 2) pageFlip.flipPrev(); else pageFlip.flipNext();
+                            if (x < w / 2) safeFlip('prev'); else safeFlip('next');
                         }
                     } else {
-                        // 모바일
-                        if (x < window.innerWidth * 0.3) pageFlip.flipPrev();
-                        else if (x > window.innerWidth * 0.7) pageFlip.flipNext();
+                        // [모바일 모드] 좌우 끝(25%) 터치만 넘김, 중앙은 메뉴 토글
+                        const w = window.innerWidth;
+                        if (x < w * 0.25) safeFlip('prev');
+                        else if (x > w * 0.75) safeFlip('next');
+                        else {
+                            // 모바일 중앙: 메뉴 토글
+                            els.ui.classList.toggle('hidden');
+                        }
                     }
                     clickTimer = null;
                 }, 250);
             }
         }
 
-        function showToast(msg) {
-            els.popup.innerText = msg;
-            els.popup.style.opacity = 1;
-            setTimeout(() => els.popup.style.opacity = 0, 1000);
-        }
-
-        function handleZoom(clickX) {
-            const currentIdx = pageFlip.getCurrentPageIndex();
+        function handleZoom(x) {
+            const idx = pageFlip.getCurrentPageIndex();
             let targetImg = null;
 
             if (isLandscapeMode) {
@@ -439,15 +409,16 @@
             }
         }
 
-        document.getElementById('zoom-close').onclick = () => els.zoomLayer.style.display = 'none';
-        els.slider.addEventListener('input', e => pageFlip.flip(parseInt(e.target.value)));
-        document.getElementById('btn-prev').onclick = () => pageFlip.flipPrev();
-        document.getElementById('btn-next').onclick = () => pageFlip.flipNext();
+        function showToast(m){ els.popup.innerText=m; els.popup.style.opacity=1; setTimeout(()=>els.popup.style.opacity=0,1000); }
+        document.getElementById('zoom-close').onclick=()=>els.zoomLayer.style.display='none';
+        els.slider.addEventListener('input', e=>pageFlip.flip(parseInt(e.target.value)));
+        document.getElementById('btn-prev').onclick=()=>safeFlip('prev');
+        document.getElementById('btn-next').onclick=()=>safeFlip('next');
 
         // === [파일 저장 - 공유용 HTML 생성] ===
         document.getElementById('btn-export').addEventListener('click', async () => {
             if(allPages.length === 0) return alert('파일 없음');
-            if(!confirm('공유용 파일을 저장합니다.\n(3D 뷰어 + 전체화면 버튼 제거됨)')) return;
+            if(!confirm('공유용 파일을 저장합니다.\n(PC/모바일 분리 로직 적용됨)')) return;
             
             els.loading.style.display = 'block';
             els.loading.innerText = "생성 중...";
@@ -465,7 +436,6 @@
             }, 100);
         });
 
-        // 내보내기용 HTML 템플릿 (메인 코드와 로직 동일)
         function createSharedHTML(jsonImages, ratio) {
             const css = document.querySelector('style').innerHTML;
             
@@ -490,7 +460,7 @@
 <script>
 const imageSrcs = ${jsonImages};
 const singlePageRatio = ${ratio};
-let pageFlip, totalPages=0, isLandscapeMode=false, clickTimer=null, isInteracting=false;
+let pageFlip, totalPages=0, isLandscapeMode=false, clickTimer=null, isInteracting=false, isFlipLocked=false;
 const els={bookContainer:document.getElementById('book-container'),flipbook:document.getElementById('flipbook'),ui:document.getElementById('ui-controls'),slider:document.getElementById('page-slider'),info:document.getElementById('page-info'),zoomLayer:document.getElementById('zoom-layer'),zoomImg:document.getElementById('zoom-img'),popup:document.getElementById('guide-popup'), menuBtn:document.getElementById('menu-toggle')};
 
 els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); }
@@ -539,12 +509,21 @@ function createFlipBook() {
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { createFlipBook(); }, 200); });
 
+// 안전 넘김
+function safeFlip(d) {
+    if(isFlipLocked) return;
+    isFlipLocked = true;
+    if(d==='next') pageFlip.flipNext(); else pageFlip.flipPrev();
+    setTimeout(()=>isFlipLocked=false, 600);
+}
+
 els.bookContainer.addEventListener('mousedown', start); els.bookContainer.addEventListener('mouseup', end);
 els.bookContainer.addEventListener('touchstart', start, {passive:true}); els.bookContainer.addEventListener('touchend', end);
 let sX=0, sT=0;
 function start(e){ isInteracting=true; sX=e.clientX||e.touches[0].clientX; sT=Date.now(); }
-function end(e){ if(!isInteracting)return; isInteracting=false; const eX=e.clientX||e.changedTouches[0].clientX; const diff=sX-eX; if(Math.abs(diff)>50 && Date.now()-sT<300){ if(diff>0)pageFlip.flipNext(); else pageFlip.flipPrev(); return; } if(Math.abs(diff)<10) handleSmartClick(eX, e.clientY||e.changedTouches[0].clientY); }
+function end(e){ if(!isInteracting)return; isInteracting=false; const eX=e.clientX||e.changedTouches[0].clientX; const diff=sX-eX; if(Math.abs(diff)>50 && Date.now()-sT<300){ if(diff>0)safeFlip('next'); else safeFlip('prev'); return; } if(Math.abs(diff)<10) handleSmartClick(eX, e.clientY||e.changedTouches[0].clientY); }
 
+// [공유 파일 모바일 로직 분리]
 function handleSmartClick(x, y) {
     if(clickTimer) { clearTimeout(clickTimer); clickTimer=null; handleZoom(x); }
     else {
@@ -554,10 +533,12 @@ function handleSmartClick(x, y) {
                 const lSafe = (x>w*0.15 && x<w*0.35) && (y>h*0.4 && y<h*0.6);
                 const rSafe = (x>w*0.65 && x<w*0.85) && (y>h*0.4 && y<h*0.6);
                 if(lSafe || rSafe) { showToast("더블클릭 영역"); }
-                else { if(x < w/2) pageFlip.flipPrev(); else pageFlip.flipNext(); }
+                else { if(x < w/2) safeFlip('prev'); else safeFlip('next'); }
             } else {
-                if(x < window.innerWidth*0.3) pageFlip.flipPrev();
-                else if(x > window.innerWidth*0.7) pageFlip.flipNext();
+                // 모바일
+                if(x < window.innerWidth*0.25) safeFlip('prev');
+                else if(x > window.innerWidth*0.75) safeFlip('next');
+                else els.ui.classList.toggle('hidden');
             }
             clickTimer = null;
         }, 250);
@@ -575,8 +556,8 @@ function handleZoom(x) {
 function showToast(m){ els.popup.innerText=m; els.popup.style.opacity=1; setTimeout(()=>els.popup.style.opacity=0,1000); }
 document.getElementById('zoom-close').onclick=()=>els.zoomLayer.style.display='none';
 els.slider.addEventListener('input', e=>pageFlip.flip(parseInt(e.target.value)));
-document.getElementById('btn-prev').onclick=()=>pageFlip.flipPrev();
-document.getElementById('btn-next').onclick=()=>pageFlip.flipNext();
+document.getElementById('btn-prev').onclick=()=>safeFlip('prev');
+document.getElementById('btn-next').onclick=()=>safeFlip('next');
 
 init();
 <\/script></body></html>`;
