@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My E-Book Stable Version</title>
+    <title>My Smart E-Book Final</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
@@ -11,63 +11,78 @@
     
     <style>
         :root { 
-            --bg: #1a1a2e;
-            --glass: rgba(255, 255, 255, 0.1);
+            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e); 
+            --glass-bg: rgba(20, 20, 28, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.15);
             --accent: #00f260; 
+            --text: #ffffff;
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body { 
-            margin: 0; padding: 0; background: var(--bg); color: #fff; 
-            font-family: sans-serif; overflow: hidden; height: 100dvh; 
+            margin: 0; padding: 0; 
+            background: var(--bg-gradient); color: var(--text); 
+            font-family: 'Pretendard', sans-serif; 
+            overflow: hidden; height: 100dvh; width: 100vw; 
             display: flex; flex-direction: column; 
+            user-select: none; -webkit-user-select: none; touch-action: none; 
         }
         
         #book-container { 
             flex: 1; width: 100%; height: 100%; 
             display: flex; align-items: center; justify-content: center; 
-            position: relative; overflow: hidden;
+            overflow: visible; position: relative; z-index: 1; 
         }
 
-        /* 캔버스 설정: 비율 깨짐 절대 방지 */
+        .stf__wrapper { box-shadow: 0 20px 80px rgba(0,0,0,0.8); }
+
+        /* [첫 번째 코드 스타일] 이미지 렌더링 설정 */
         .page-canvas { 
-            display: block; background: #fff;
-            width: 100% !important; height: 100% !important;
-            object-fit: contain !important; 
+            width: 100% !important; height: 100% !important; 
+            display: block; object-fit: contain !important; 
+            background: #fff;
         }
 
+        /* 메뉴 토글 버튼 (우측 상단) */
         #menu-toggle { 
-            position: fixed; top: 15px; right: 15px; z-index: 150; 
-            width: 40px; height: 40px; border-radius: 50%; 
-            background: var(--glass); border: 1px solid rgba(255,255,255,0.2); 
-            color: white; cursor: pointer; font-size: 20px;
-            backdrop-filter: blur(5px);
+            position: fixed; top: 20px; right: 20px; z-index: 150; 
+            width: 48px; height: 48px; border-radius: 50%; 
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); 
+            color: white; display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; font-size: 24px; backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
+        /* 하단 UI 컨트롤 */
         #ui-controls { 
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
-            width: 80%; max-width: 400px; background: rgba(0,0,0,0.8);
-            padding: 15px; display: flex; flex-direction: column; gap: 10px; 
-            z-index: 100; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);
-            transition: opacity 0.3s;
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); 
+            width: 90%; max-width: 450px;
+            background: var(--glass-bg); backdrop-filter: blur(30px);
+            padding: 15px 25px; display: flex; flex-direction: column; gap: 10px; 
+            z-index: 100; border-radius: 25px; border: 1px solid var(--glass-border);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
         }
-        #ui-controls.hidden { opacity: 0; pointer-events: none; }
+        #ui-controls.hidden { transform: translate(-50%, 150%); opacity: 0; pointer-events: none; }
         
-        .row { display: flex; align-items: center; justify-content: space-between; }
-        #page-info { font-size: 13px; font-weight: bold; color: #aaa; }
+        #page-info { font-size: 14px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
         
+        .control-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+
         .nav-btn {
-            width: 35px; height: 35px; border-radius: 50%; background: #333; 
-            border: none; color: #fff; cursor: pointer;
+            width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
 
-        input[type=range] { flex: 1; margin: 0 10px; }
+        input[type=range] { flex: 1; height: 6px; -webkit-appearance: none; background: rgba(255,255,255,0.2); border-radius: 10px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; cursor: pointer; box-shadow: 0 0 15px var(--accent); border: 3px solid #fff; }
 
-        #start-screen { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-load { background: var(--accent); color: #000; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; }
+        /* 시작 화면 */
+        #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-gradient); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .btn-main { background: linear-gradient(90deg, #0575E6, #00f260); color: #fff; border: none; padding: 18px 50px; font-size: 18px; font-weight: 900; border-radius: 50px; cursor: pointer; box-shadow: 0 15px 35px rgba(0, 242, 96, 0.3); transition: transform 0.2s; }
+        .ui-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 18px; border-radius: 20px; font-size: 13px; cursor: pointer; }
         
-        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: none; align-items: center; justify-content: center; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 300; color: white; background: rgba(0,0,0,0.9); padding: 30px 60px; border-radius: 25px; text-align: center; backdrop-filter: blur(10px); }
     </style>
 </head>
 <body>
@@ -75,25 +90,27 @@
     <button id="menu-toggle">☰</button>
 
     <div id="start-screen">
-        <button class="btn-load" onclick="document.getElementById('file-input').click()">PDF 불러오기</button>
+        <h1 style="margin-bottom: 5px; font-size: 2.8rem; letter-spacing: -2px;">SMART LIB</h1>
+        <p style="margin-bottom: 45px; color: rgba(255,255,255,0.4);">원본 비율 복구 및 기능 통합 버전</p>
+        <button class="btn-main" onclick="document.getElementById('file-input').click()">PDF 파일 열기</button>
         <input type="file" id="file-input" accept="application/pdf" style="display: none;">
-        <div style="margin-top: 20px; display: flex; gap: 10px;">
-            <button onclick="exportFile()" style="background:none; color:#777; border:1px solid #444; padding:5px 10px; border-radius:5px; cursor:pointer;">파일 저장</button>
-            <button onclick="resetDB()" style="background:none; color:#777; border:1px solid #444; padding:5px 10px; border-radius:5px; cursor:pointer;">초기화</button>
+        <div style="margin-top: 45px; display: flex; gap: 15px;">
+            <button class="ui-btn" id="btn-export">파일로 내보내기 (3D)</button>
+            <button class="ui-btn" id="btn-reset">초기화</button>
         </div>
     </div>
 
-    <div id="loading">처리 중...</div>
+    <div id="loading">✨ 원본 비율로 이미지 생성 중...</div>
 
     <div id="book-container">
         <div id="flipbook"></div>
     </div>
 
     <div id="ui-controls" class="hidden">
-        <div class="row" style="justify-content:center; margin-bottom:5px;">
+        <div class="control-row" style="justify-content: center; margin-bottom: 5px;">
             <span id="page-info">0 / 0</span>
         </div>
-        <div class="row">
+        <div class="control-row">
             <button class="nav-btn" onclick="pageFlip.flipPrev()">‹</button>
             <input type="range" id="page-slider" min="0" value="0">
             <button class="nav-btn" onclick="pageFlip.flipNext()">›</button>
@@ -115,48 +132,49 @@
             menuBtn: document.getElementById('menu-toggle')
         };
 
-        let pageFlip, allPages = [], singlePageRatio = 0.7;
+        let pageFlip, allPages = [], pdfDoc = null, singlePageRatio = 0.75;
 
         els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); };
 
-        // DB 로직
         const DB_NAME="SimpleEbookDB", STORE_NAME="pdf_store";
         function openDB(){ return new Promise(r=>{ const q=indexedDB.open(DB_NAME,1); q.onupgradeneeded=e=>e.target.result.createObjectStore(STORE_NAME); q.onsuccess=e=>r(e.target.result); }); }
         async function loadDB(){ const db=await openDB(); const r=db.transaction(STORE_NAME).objectStore(STORE_NAME).get("current"); return new Promise(s=>r.onsuccess=()=>s(r.result)); }
         async function saveDB(d){ const db=await openDB(); db.transaction(STORE_NAME,"readwrite").objectStore(STORE_NAME).put(d,"current"); }
-        function resetDB(){ if(confirm('초기화?')){ indexedDB.deleteDatabase(DB_NAME); location.reload(); } }
 
         window.onload = async () => { const d = await loadDB(); if(d) startViewer(d); };
         els.fileInput.onchange = async e => { const f = e.target.files[0]; if(f){ const d = await f.arrayBuffer(); await saveDB(d); startViewer(d); } };
+        document.getElementById('btn-reset').onclick = () => { if(confirm('초기화?')){ indexedDB.deleteDatabase(DB_NAME); location.reload(); } };
 
         function startViewer(data) {
             els.startScreen.style.display = 'none';
-            els.loading.style.display = 'flex';
+            els.loading.style.display = 'block';
             renderPDF(data);
         }
 
         async function renderPDF(data) {
             try {
-                const pdf = await pdfjsLib.getDocument(data).promise;
-                const p1 = await pdf.getPage(1);
+                pdfDoc = await pdfjsLib.getDocument(data).promise;
+                const p1 = await pdfDoc.getPage(1);
                 const v1 = p1.getViewport({scale: 1});
+                
+                // [첫 번째 코드 방식] 원본 가로/세로 비율 산출
                 singlePageRatio = v1.width / v1.height;
 
                 allPages = [];
-                for(let i=1; i<=pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({scale: 1.5}); 
+                for(let i=1; i<=pdfDoc.numPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const viewport = page.getViewport({scale: 2.0}); 
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     canvas.width = viewport.width; canvas.height = viewport.height;
                     canvas.className = "page-canvas";
                     await page.render({canvasContext: ctx, viewport}).promise;
                     allPages.push(canvas);
-                    els.loading.innerText = `변환 중... (${i}/${pdf.numPages})`;
+                    els.loading.innerText = `고화질 변환 (${Math.round((i/pdfDoc.numPages)*100)}%)`;
                 }
                 els.loading.style.display = 'none';
                 initFlipBook();
-            } catch(e) { alert(e.message); }
+            } catch(e) { alert("PDF 오류: " + e.message); }
         }
 
         function initFlipBook() {
@@ -168,20 +186,17 @@
             const h = els.bookContainer.clientHeight;
             const isLandscape = w > h;
 
-            // [오류 방지 핵심: Contain 로직]
-            // 화면 높이나 너비 중 더 좁은 곳에 맞춰 크기를 고정합니다.
-            const pad = 40;
+            // [첫 번째 코드 방식] 컨테이너 크기에 맞춰 비율을 유지하는 최적의 px 계산
+            const pad = isLandscape ? 60 : 30;
             const aW = w - pad;
             const aH = h - pad;
             let bW, bH;
 
             if (isLandscape) {
-                // PC 모드 (2쪽)
                 const targetRatio = singlePageRatio * 2;
                 if (aW / aH > targetRatio) { bH = aH; bW = bH * targetRatio; } 
                 else { bW = aW; bH = bW / targetRatio; }
             } else {
-                // 모바일 모드 (1쪽)
                 if (aW / aH > singlePageRatio) { bH = aH; bW = bH * singlePageRatio; } 
                 else { bW = aW; bH = bW / singlePageRatio; }
             }
@@ -189,7 +204,7 @@
             pageFlip = new St.PageFlip(els.flipbook, {
                 width: Math.floor(bW / (isLandscape ? 2 : 1)), 
                 height: Math.floor(bH),
-                size: 'fixed', // 크기를 고정하여 이미지 늘어남 방지
+                size: 'fixed', 
                 usePortrait: !isLandscape,
                 showCover: true,
                 drawShadow: true,
@@ -198,13 +213,14 @@
 
             pageFlip.loadFromHTML(allPages);
             els.slider.max = pageFlip.getPageCount() - 1;
+            
             pageFlip.on('flip', (e) => {
                 els.info.innerText = `${e.data + 1} / ${pageFlip.getPageCount()}`;
                 els.slider.value = e.data;
             });
         }
 
-        let rt; window.onresize = () => { clearTimeout(rt); rt = setTimeout(initFlipBook, 200); };
+        let rt; window.onresize = () => { clearTimeout(rt); rt = setTimeout(initFlipBook, 150); };
 
         els.bookContainer.onclick = (e) => {
             if (e.target.closest('#ui-controls') || e.target.closest('#menu-toggle')) return;
@@ -214,14 +230,15 @@
 
         els.slider.oninput = e => pageFlip.flip(parseInt(e.target.value));
 
-        function exportFile() {
+        // 공유 파일 저장 (3D 기능 포함)
+        document.getElementById('btn-export').onclick = () => {
             const imgs = allPages.map(c => c.toDataURL('image/jpeg', 0.8));
-            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>E-Book</title>
+            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>E-Book Smart Viewer</title>
             <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"><\/script>
-            <style>${document.querySelector('style').innerHTML} #start-screen {display:none!important}</style></head>
+            <style>${document.querySelector('style').innerHTML} #start-screen, .ui-btn {display:none!important}</style></head>
             <body><button id="menu-toggle">☰</button><div id="book-container"><div id="flipbook"></div></div>
-            <div id="ui-controls" class="hidden"><div class="row" style="justify-content:center;margin-bottom:5px;"><span id="page-info">0 / 0</span></div>
-            <div class="row"><button class="nav-btn" onclick="pageFlip.flipPrev()">‹</button><input type="range" id="page-slider" oninput="pageFlip.flip(parseInt(this.value))"><button class="nav-btn" onclick="pageFlip.flipNext()">›</button></div></div>
+            <div id="ui-controls" class="hidden"><div class="control-row" style="justify-content:center;margin-bottom:5px;"><span id="page-info">0 / 0</span></div>
+            <div class="control-row"><button class="nav-btn" onclick="pageFlip.flipPrev()">‹</button><input type="range" id="page-slider" oninput="pageFlip.flip(parseInt(this.value))"><button class="nav-btn" onclick="pageFlip.flipNext()">›</button></div></div>
             <script>
                 const srcs = ${JSON.stringify(imgs)}; const ratio = ${singlePageRatio};
                 const els = { container: document.getElementById('book-container'), flipbook: document.getElementById('flipbook'), info: document.getElementById('page-info'), slider: document.getElementById('page-slider'), ui: document.getElementById('ui-controls') };
@@ -235,7 +252,7 @@
                 function render() {
                     if(pageFlip) pageFlip.destroy();
                     const w = els.container.clientWidth, h = els.container.clientHeight, isL = w > h;
-                    const aW = w-40, aH = h-40; let bW, bH, tR = isL ? ratio*2 : ratio;
+                    const aW = w-60, aH = h-60; let bW, bH, tR = isL ? ratio*2 : ratio;
                     if(aW/aH > tR) { bH = aH; bW = bH * tR; } else { bW = aW; bH = bW / tR; }
                     pageFlip = new St.PageFlip(els.flipbook, { width: Math.floor(bW/(isL?2:1)), height: Math.floor(bH), size: 'fixed', usePortrait: !isL, showCover: true });
                     pageFlip.loadFromHTML(document.querySelectorAll('img'));
@@ -246,8 +263,8 @@
                 window.onresize = render; init();
             <\/script></body></html>`;
             const blob = new Blob([html], {type: 'text/html'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "My_Ebook.html"; a.click();
-        }
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "My_Smart_Ebook.html"; a.click();
+        };
     </script>
 </body>
 </html>
