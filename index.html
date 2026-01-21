@@ -3,22 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Split E-Book</title>
+    <title>Smart E-Book Perfect Split</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
     <style>
         :root { --bg: #121212; --accent: #00f260; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
-        #book-container { flex: 1; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        
+        /* 중앙 정렬 강화: 치우침 방지 */
+        #book-container { 
+            flex: 1; width: 100%; height: 100%; 
+            display: flex; align-items: center; justify-content: center; 
+            position: relative; overflow: hidden;
+            padding: 0; margin: 0;
+        }
+        
+        #flipbook { display: flex; align-items: center; justify-content: center; }
+        
         .page-canvas { display: block; background: #fff; width: 100% !important; height: 100% !important; object-fit: contain !important; }
+        
         #menu-toggle { position: fixed; top: 15px; right: 15px; z-index: 150; width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        
         #ui-controls { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: rgba(0,0,0,0.9); padding: 15px; border-radius: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; transition: opacity 0.3s; }
         #ui-controls.hidden { opacity: 0; pointer-events: none; }
+        
         #page-info { font-size: 13px; text-align: center; color: #aaa; margin-bottom: 5px; }
         .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .nav-btn { width: 40px; height: 40px; border-radius: 50%; background: #333; border: none; color: #fff; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         input[type=range] { flex: 1; accent-color: var(--accent); }
+        
         #start-screen { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .btn-main { background: var(--accent); color: #000; border: none; padding: 16px 40px; font-size: 17px; font-weight: bold; border-radius: 10px; cursor: pointer; }
         #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 15px; color: white; }
@@ -26,9 +40,10 @@
 </head>
 <body>
     <button id="menu-toggle">☰</button>
-    <div id="start-screen"><button class="btn-main" onclick="document.getElementById('file-input').click()">PDF 불러오기 (자동 분할)</button><input type="file" id="file-input" accept="application/pdf" style="display: none;"></div>
-    <div id="loading"><span>가로 페이지 감지 및 쪼개는 중...</span><small id="load-progress">0%</small></div>
+    <div id="start-screen"><button class="btn-main" onclick="document.getElementById('file-input').click()">PDF 불러오기</button><input type="file" id="file-input" accept="application/pdf" style="display: none;"></div>
+    <div id="loading"><span>완벽한 비율로 페이지 분리 중...</span><small id="load-progress">0%</small></div>
     <div id="book-container"><div id="flipbook"></div></div>
+    
     <div id="ui-controls" class="hidden">
         <div id="page-info">0 / 0</div>
         <div class="row">
@@ -40,7 +55,6 @@
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
         
         let pageFlip, allPages = [], singlePageRatio = 0.7, isLocked = false;
@@ -67,33 +81,31 @@
             allPages = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                // 모바일 최적화 배율
-                const viewport = page.getViewport({scale: isMobile ? 1.4 : 2.0});
+                const viewport = page.getViewport({scale: isMobile ? 1.5 : 2.0});
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = viewport.width; canvas.height = viewport.height;
                 await page.render({canvasContext: ctx, viewport}).promise;
 
-                // [강력 분할 로직] 가로가 세로보다 길면 무조건 쪼갬
-                if (viewport.width > viewport.height) {
-                    const halfW = canvas.width / 2;
+                // [분할 로직 수정] 가로가 세로보다 길면 정밀 분할
+                if (viewport.width > viewport.height * 1.1) {
+                    const halfW = Math.floor(canvas.width / 2);
                     
-                    // 1. 왼쪽 캔버스 (중앙 기준 0~50%)
+                    // 1. 왼쪽 캔버스 (확실하게 0부터 50%까지 추출)
                     const leftC = document.createElement('canvas');
                     leftC.width = halfW; leftC.height = canvas.height;
                     leftC.className = 'page-canvas';
                     leftC.getContext('2d').drawImage(canvas, 0, 0, halfW, canvas.height, 0, 0, halfW, canvas.height);
                     allPages.push(leftC);
 
-                    // 2. 오른쪽 캔버스 (중앙 기준 50~100%)
+                    // 2. 오른쪽 캔버스 (정확히 중간 지점부터 끝까지 추출)
                     const rightC = document.createElement('canvas');
-                    rightC.width = halfW; rightC.height = canvas.height;
+                    rightC.width = canvas.width - halfW; rightC.height = canvas.height;
                     rightC.className = 'page-canvas';
-                    rightC.getContext('2d').drawImage(canvas, halfW, 0, halfW, canvas.height, 0, 0, halfW, canvas.height);
+                    rightC.getContext('2d').drawImage(canvas, halfW, 0, canvas.width - halfW, canvas.height, 0, 0, canvas.width - halfW, canvas.height);
                     allPages.push(rightC);
 
-                    // 단일 페이지 비율 업데이트
                     singlePageRatio = halfW / canvas.height;
                 } else {
                     canvas.className = 'page-canvas';
@@ -115,29 +127,36 @@
             const h = document.getElementById('book-container').clientHeight;
             const isLandscape = w > h;
             
-            // 모바일 세로면 무조건 single(한쪽씩 크게), 가로거나 PC면 double(양면)
-            let viewMode = (!isMobile) ? 'double' : (isLandscape ? 'double' : 'single');
+            // 모바일 세로면 무조건 단면, 그 외는 기기 특성 및 방향에 따름
+            let viewMode = (isMobile && !isLandscape) ? 'single' : 'double';
             const targetRatio = viewMode === 'double' ? singlePageRatio * 2 : singlePageRatio;
             
             let bW, bH;
-            if (w / h > targetRatio) { bH = h - 40; bW = bH * targetRatio; }
-            else { bW = w - 40; bH = bW / targetRatio; }
+            // 화면 여백 40px 제외 후 계산
+            const availW = w - 40;
+            const availH = h - 40;
+
+            if (availW / availH > targetRatio) { 
+                bH = availH; bW = bH * targetRatio; 
+            } else { 
+                bW = availW; bH = bW / targetRatio; 
+            }
 
             pageFlip = new St.PageFlip(els.flipbook, {
                 width: Math.floor(bW / (viewMode === 'double' ? 2 : 1)),
                 height: Math.floor(bH),
                 size: 'fixed',
                 usePortrait: viewMode === 'single',
-                showCover: viewMode === 'double',
-                mobileScrollSupport: isMobile,
-                swipeDistance: 30,
-                flippingTime: 600
+                showCover: viewMode === 'double', // 양면 모드일 때만 표지 개념 적용
+                drawShadow: true,
+                flippingTime: 600,
+                mobileScrollSupport: false
             });
 
             pageFlip.loadFromHTML(allPages);
             els.slider.max = pageFlip.getPageCount() - 1;
             pageFlip.on('flip', (e) => {
-                els.info.innerText = (e.data + 1) + ' / ' + pageFlip.getPageCount();
+                els.info.innerText = `${e.data + 1} / ${pageFlip.getPageCount()}`;
                 els.slider.value = e.data;
             });
         }
@@ -154,18 +173,14 @@
         els.slider.oninput = (e) => pageFlip.flip(parseInt(e.target.value));
 
         const container = document.getElementById('book-container');
-        if (isTouch) {
-            container.ontouchend = (e) => {
-                if (e.target.closest('#ui-controls') || e.target.closest('#menu-toggle')) return;
-                const x = e.changedTouches[0].clientX;
-                x < window.innerWidth * 0.3 ? safeFlip('prev') : (x > window.innerWidth * 0.7 ? safeFlip('next') : null);
-            };
-        } else {
-            container.onclick = (e) => {
-                if (e.target.closest('#ui-controls') || e.target.closest('#menu-toggle')) return;
-                e.clientX < window.innerWidth / 2 ? safeFlip('prev') : safeFlip('next');
-            };
-        }
+        // 치우침 방지 및 클릭 영역 일원화
+        container.onclick = (e) => {
+            if (e.target.closest('#ui-controls') || e.target.closest('#menu-toggle')) return;
+            const clickX = e.clientX;
+            const screenW = window.innerWidth;
+            if (clickX < screenW / 2) safeFlip('prev');
+            else safeFlip('next');
+        };
 
         window.onresize = () => { if(allPages.length > 0) initFlipBook(); };
     </script>
