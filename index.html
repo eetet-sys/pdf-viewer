@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart E-Book</title>
+    <title>My Smart E-Book 2026</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0c29">
     
@@ -287,16 +287,13 @@ document.addEventListener('click', e => {
     const y = e.clientY;
     const h = window.innerHeight;
     
-    // [중요] 오프라인 모드에서도 중앙 보호 구역 (PC)
     const isLand = w > h;
     if (isLand) {
         const xp = x / w;
         const yp = y / h;
-        // 왼쪽 페이지 중앙(20-30%), 오른쪽 페이지 중앙(70-80%), 높이 45-55%
         const isLeftSafe = (xp > 0.20 && xp < 0.30) && (yp > 0.45 && yp < 0.55);
         const isRightSafe = (xp > 0.70 && xp < 0.80) && (yp > 0.45 && yp < 0.55);
-        
-        if (isLeftSafe || isRightSafe) return; // 보호구역 클릭 시 무시
+        if (isLeftSafe || isRightSafe) return; 
     }
 
     if (x < w * 0.3) move(-1);
@@ -483,7 +480,6 @@ render();
             }
         }
 
-        // [중앙 10% 보호 구역 적용]
         function handleMouseDown(e) {
             if (Date.now()-lastTouchTime<1000) return;
             if (e.target.closest('#ui-controls') || e.target.closest('#guide-popup')) return;
@@ -493,24 +489,19 @@ render();
             const x = e.clientX;
             const y = e.clientY;
 
-            // PC(가로모드)일 때만 보호 구역 체크
+            // [중앙 10% 보호 구역 로직]
             if (isTwoPageMode) {
                 const xp = x / w;
                 const yp = y / h;
-                
-                // [보호 구역 정의]
-                // 왼쪽 페이지 정중앙: 가로 20%~30%, 세로 45%~55%
                 const isLeftSafe = (xp > 0.20 && xp < 0.30) && (yp > 0.45 && yp < 0.55);
-                // 오른쪽 페이지 정중앙: 가로 70%~80%, 세로 45%~55%
                 const isRightSafe = (xp > 0.70 && xp < 0.80) && (yp > 0.45 && yp < 0.55);
 
                 if (isLeftSafe || isRightSafe) {
                     console.log("Safe Zone Clicked: Ignoring flip for double-click.");
-                    return; // 페이지 넘김 무시 -> 더블 클릭 허용
+                    return; 
                 }
             }
 
-            // 일반 페이지 넘김 로직
             if (x < w * 0.3) safeFlip('prev');
             else if (x > w * 0.7) safeFlip('next');
             else els.ui.classList.toggle('hidden');
@@ -529,9 +520,20 @@ render();
             else if (document.exitFullscreen) document.exitFullscreen();
         });
 
-        let rt;
-        window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(reloadBook, 300); });
-        document.addEventListener('fullscreenchange', () => { els.btnFullscreen.innerText = document.fullscreenElement ? "축소" : "전체화면"; setTimeout(reloadBook, 200); });
+        // [중요] Resize Observer: 창 크기 변화 감지하여 즉시 리로드
+        let resizeTimer;
+        const resizeObserver = new ResizeObserver(entries => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                reloadBook();
+            }, 100); // 0.1초 딜레이 (부드러운 전환)
+        });
+        resizeObserver.observe(els.bookContainer);
+
+        document.addEventListener('fullscreenchange', () => { 
+            els.btnFullscreen.innerText = document.fullscreenElement ? "축소" : "전체화면"; 
+            setTimeout(reloadBook, 200); 
+        });
 
         function reloadBook() {
             if(pageFlip && allPages.length>0){
@@ -546,6 +548,3 @@ render();
     </script>
 </body>
 </html>
-
-```
-
