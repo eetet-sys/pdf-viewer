@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> E-Book Final</title>
+    <title>My Smart E-Book Final</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0c29">
     
@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     
     <style>
-        /* 2026 Future Design Theme */
+        /* 2026 Future Design System */
         :root { 
             --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e); 
             --glass-bg: rgba(20, 20, 28, 0.9);
@@ -34,8 +34,6 @@
             touch-action: none; 
         }
         
-        body:fullscreen, #book-container:fullscreen { background: #000; width: 100vw; height: 100vh; }
-
         #book-container { 
             flex: 1; width: 100%; height: 100%; 
             display: flex; align-items: center; justify-content: center; 
@@ -44,19 +42,7 @@
 
         /* 책 스타일 */
         .stf__wrapper { box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-        .page-canvas { width: 100%; height: 100%; object-fit: contain; }
-
-        /* [NEW] 우측 상단 고정 메뉴 버튼 */
-        #menu-toggle-btn {
-            position: fixed; top: 20px; right: 20px; z-index: 150;
-            width: 45px; height: 45px; border-radius: 50%;
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            color: white; font-size: 24px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-        }
-        #menu-toggle-btn:active { transform: scale(0.9); background: var(--accent); color: #000; }
+        .page-canvas { width: 100%; height: 100%; object-fit: contain; } /* 비율 유지 핵심 */
 
         /* UI 컨트롤 (하단) */
         #ui-controls { 
@@ -72,7 +58,7 @@
         }
         #ui-controls.hidden { transform: translate(-50%, 150%); opacity: 0; pointer-events: none; }
         
-        .control-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .control-top { display: flex; justify-content: center; align-items: center; margin-bottom: 5px; }
         .control-bottom { display: flex; align-items: center; gap: 15px; }
 
         #page-info { font-size: 14px; font-weight: bold; color: #ddd; font-variant-numeric: tabular-nums; }
@@ -95,23 +81,28 @@
             -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer;
         }
 
+        /* 시작 화면 */
         #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-gradient); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .btn-main { background: linear-gradient(90deg, #0575E6, #00f260); color: #fff; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(0, 242, 96, 0.4); }
         
         #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 200; color: white; background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; text-align: center; }
 
+        /* 줌 레이어 */
         #zoom-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 300; display: none; }
         #zoom-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         #zoom-img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #zoom-close { position: absolute; top: 30px; right: 30px; color: white; font-size: 30px; cursor: pointer; z-index: 301; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;}
         
-        #guide-popup { position: fixed; top: 80px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 10px; z-index: 150; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity 0.5s; text-align: right; }
+        /* 알림 팝업 */
+        #guide-popup { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; z-index: 150; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+        
+        /* 메뉴 토글 버튼 */
+        #menu-toggle { position: fixed; top: 20px; right: 20px; z-index: 150; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
     </style>
 </head>
 <body>
 
-    <button id="menu-toggle-btn">☰</button>
-
+    <button id="menu-toggle">☰</button>
     <div id="guide-popup"></div>
 
     <div id="start-screen">
@@ -122,7 +113,7 @@
             <button class="ui-btn" id="btn-export">공유 파일 저장</button>
             <button class="ui-btn" id="btn-reset">초기화</button>
         </div>
-        <p style="margin-top: 20px; font-size: 13px; color: #aaa;">비율 고정 | 메뉴 버튼 추가 | 오프라인 지원</p>
+        <p style="margin-top: 20px; font-size: 13px; color: #aaa;">원본 비율 유지 | 3D 효과 | 클릭 보호</p>
     </div>
 
     <div id="loading">분석 중...</div>
@@ -134,7 +125,6 @@
     <div id="ui-controls" class="hidden">
         <div class="control-top">
             <span id="page-info">준비됨</span>
-            <button class="ui-btn" onclick="toggleFull()">전체화면</button>
         </div>
         <div class="control-bottom">
             <button class="nav-btn" id="btn-prev">‹</button>
@@ -164,14 +154,14 @@
             zoomLayer: document.getElementById('zoom-layer'),
             zoomImg: document.getElementById('zoom-img'),
             popup: document.getElementById('guide-popup'),
-            menuBtn: document.getElementById('menu-toggle-btn')
+            menuBtn: document.getElementById('menu-toggle')
         };
 
         let pageFlip;
         let allPages = [];
         let pdfDoc = null;
         let totalPages = 0;
-        let singlePageRatio = 0.7; // 1장 기준 비율
+        let singlePageRatio = 0.7; 
         let isLandscapeMode = false;
         
         let clickTimer = null;
@@ -201,15 +191,12 @@
             if(confirm('초기화 하시겠습니까?')) { await clearDB(); location.reload(); }
         });
 
-        // [메뉴 버튼 기능]
-        els.menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            els.ui.classList.toggle('hidden');
-        });
+        els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); }
 
         function startViewer(data) {
             els.startScreen.style.display = 'none';
             els.loading.style.display = 'block';
+            els.ui.classList.remove('hidden');
             processPDF(data);
         }
 
@@ -219,7 +206,7 @@
                 const p1 = await pdfDoc.getPage(1);
                 const v1 = p1.getViewport({scale: 1});
                 
-                // [비율 계산]
+                // [비율 계산] 원본 비율 유지 로직
                 if (v1.width > v1.height * 1.2) {
                     singlePageRatio = (v1.width / 2) / v1.height;
                 } else {
@@ -230,7 +217,7 @@
                 els.flipbook.innerHTML = "";
 
                 for(let i=1; i<=pdfDoc.numPages; i++) {
-                    els.loading.innerText = `변환 중... ${i}/${pdfDoc.numPages}`;
+                    els.loading.innerText = `생성 중... ${i}/${pdfDoc.numPages}`;
                     const page = await pdfDoc.getPage(i);
                     const viewport = page.getViewport({scale: 2.0}); // 고화질
                     
@@ -272,7 +259,7 @@
             return [l, r];
         }
 
-        // === [책 생성 - 비율 고정 Logic] ===
+        // === [책 생성 - 맨 처음 코드의 비율 계산 로직 적용] ===
         function createFlipBook() {
             if (pageFlip) pageFlip.destroy();
             els.flipbook.innerHTML = "";
@@ -281,11 +268,8 @@
             const wrapperW = els.bookContainer.clientWidth;
             const wrapperH = els.bookContainer.clientHeight;
             
-            // 크기 0일 때 방어 코드
-            if (wrapperW === 0 || wrapperH === 0) {
-                setTimeout(createFlipBook, 100);
-                return;
-            }
+            // 안전 장치
+            if(wrapperW === 0 || wrapperH === 0) { setTimeout(createFlipBook, 100); return; }
 
             isLandscapeMode = wrapperW > wrapperH; 
             
@@ -295,26 +279,33 @@
 
             let bookW, bookH;
 
-            // [비율 계산] Contain 방식 (화면보다 커지지 않게)
+            // [비율 유지 공식]
+            // 화면에 "가득 채우되(Contain)", "비율은 깨지 않음"
             if (isLandscapeMode) {
-                // PC: 2쪽
-                const targetRatio = singlePageRatio * 2;
+                // PC: 2쪽 보기 비율
+                const targetRatio = singlePageRatio * 2; 
                 const screenRatio = availW / availH;
 
                 if (screenRatio > targetRatio) {
-                    bookH = availH; bookW = bookH * targetRatio;
+                    // 화면이 더 넓음 -> 높이에 맞춤
+                    bookH = availH;
+                    bookW = bookH * targetRatio;
                 } else {
-                    bookW = availW; bookH = bookW / targetRatio;
+                    // 화면이 더 좁음 -> 너비에 맞춤
+                    bookW = availW;
+                    bookH = bookW / targetRatio;
                 }
             } else {
-                // Mobile: 1쪽
+                // 모바일: 1쪽 보기 비율
                 const targetRatio = singlePageRatio;
                 const screenRatio = availW / availH;
 
                 if (screenRatio > targetRatio) {
-                    bookH = availH; bookW = bookH * targetRatio;
+                    bookH = availH;
+                    bookW = bookH * targetRatio;
                 } else {
-                    bookW = availW; bookH = bookW / targetRatio;
+                    bookW = availW;
+                    bookH = bookW / targetRatio;
                 }
             }
 
@@ -324,7 +315,7 @@
             pageFlip = new St.PageFlip(els.flipbook, {
                 width: bookW,
                 height: bookH,
-                size: 'fixed', // 비율 고정의 핵심
+                size: 'fixed', // 늘어남 방지 핵심
                 usePortrait: !isLandscapeMode,
                 maxShadowOpacity: 0.5,
                 autoSize: true,
@@ -351,7 +342,7 @@
             }, 200);
         });
 
-        // === 클릭 핸들러 (중앙 클릭 메뉴 X, 버튼으로만 O) ===
+        // === 클릭 핸들러 (중앙 클릭 보호 + 더블클릭 줌) ===
         els.bookContainer.addEventListener('mousedown', handleInputStart);
         els.bookContainer.addEventListener('mouseup', handleInputEnd);
         els.bookContainer.addEventListener('touchstart', handleInputStart, {passive: true});
@@ -375,7 +366,8 @@
 
             // 스와이프
             if (Math.abs(diff) > 50 && timeDiff < 300) {
-                if (diff > 0) pageFlip.flipNext(); else pageFlip.flipPrev();
+                if (diff > 0) pageFlip.flipNext();
+                else pageFlip.flipPrev();
                 return;
             }
 
@@ -396,18 +388,19 @@
                 // 싱글 클릭 -> 페이지 넘김 (중앙 보호)
                 clickTimer = setTimeout(() => {
                     if (isLandscapeMode) {
-                        const w = window.innerWidth, h = window.innerHeight;
-                        // 중앙 10% 보호 구역
-                        const lSafe = (x > w*0.2 && x < w*0.3) && (y > h*0.45 && y < h*0.55);
-                        const rSafe = (x > w*0.7 && x < w*0.8) && (y > h*0.45 && y < h*0.55);
+                        const w = window.innerWidth;
+                        const h = window.innerHeight;
+                        // [중앙 15% Safe Zone]
+                        const lSafe = (x > w*0.15 && x < w*0.35) && (y > h*0.4 && y < h*0.6);
+                        const rSafe = (x > w*0.65 && x < w*0.85) && (y > h*0.4 && y < h*0.6);
 
                         if (lSafe || rSafe) {
-                            showToast("더블클릭 영역 (이동 X)");
+                            showToast("더블클릭 영역입니다");
                         } else {
                             if (x < w / 2) pageFlip.flipPrev(); else pageFlip.flipNext();
                         }
                     } else {
-                        // 모바일: 좌우 30%만 넘김, 중앙은 무반응 (메뉴 버튼 사용 유도)
+                        // 모바일
                         if (x < window.innerWidth * 0.3) pageFlip.flipPrev();
                         else if (x > window.innerWidth * 0.7) pageFlip.flipNext();
                     }
@@ -451,15 +444,10 @@
         document.getElementById('btn-prev').onclick = () => pageFlip.flipPrev();
         document.getElementById('btn-next').onclick = () => pageFlip.flipNext();
 
-        function toggleFull() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-            else document.exitFullscreen();
-        }
-
-        // === [파일 저장 - 3D 뷰어 포함 + 메뉴 버튼 포함] ===
+        // === [파일 저장 - 공유용 HTML 생성] ===
         document.getElementById('btn-export').addEventListener('click', async () => {
             if(allPages.length === 0) return alert('파일 없음');
-            if(!confirm('파일을 저장합니다.\n(인터넷 연결 필요 / 메뉴 버튼 포함)')) return;
+            if(!confirm('공유용 파일을 저장합니다.\n(3D 뷰어 + 전체화면 버튼 제거됨)')) return;
             
             els.loading.style.display = 'block';
             els.loading.innerText = "생성 중...";
@@ -477,6 +465,7 @@
             }, 100);
         });
 
+        // 내보내기용 HTML 템플릿 (메인 코드와 로직 동일)
         function createSharedHTML(jsonImages, ratio) {
             const css = document.querySelector('style').innerHTML;
             
@@ -490,11 +479,11 @@
 <style>${css} #start-screen, .top-btn-group {display:none!important} body {background: #111;}</style>
 </head>
 <body>
-<button id="menu-toggle-btn">☰</button>
+<button id="menu-toggle">☰</button>
 <div id="guide-popup"></div>
 <div id="book-container"><div id="flipbook"></div></div>
 <div id="ui-controls" class="hidden">
- <div class="control-top"><span id="page-info">0/0</span><button class="ui-btn" onclick="toggleFull()">전체화면</button></div>
+ <div class="control-top"><span id="page-info">0/0</span></div>
  <div class="control-bottom"><button class="nav-btn" id="btn-prev">‹</button><input type="range" id="page-slider"><button class="nav-btn" id="btn-next">›</button></div>
 </div>
 <div id="zoom-layer"><div id="zoom-close">✕</div><div id="zoom-container"><img id="zoom-img"></div></div>
@@ -502,10 +491,9 @@
 const imageSrcs = ${jsonImages};
 const singlePageRatio = ${ratio};
 let pageFlip, totalPages=0, isLandscapeMode=false, clickTimer=null, isInteracting=false;
-const els={bookContainer:document.getElementById('book-container'),flipbook:document.getElementById('flipbook'),ui:document.getElementById('ui-controls'),slider:document.getElementById('page-slider'),info:document.getElementById('page-info'),zoomLayer:document.getElementById('zoom-layer'),zoomImg:document.getElementById('zoom-img'),popup:document.getElementById('guide-popup'), menuBtn:document.getElementById('menu-toggle-btn')};
+const els={bookContainer:document.getElementById('book-container'),flipbook:document.getElementById('flipbook'),ui:document.getElementById('ui-controls'),slider:document.getElementById('page-slider'),info:document.getElementById('page-info'),zoomLayer:document.getElementById('zoom-layer'),zoomImg:document.getElementById('zoom-img'),popup:document.getElementById('guide-popup'), menuBtn:document.getElementById('menu-toggle')};
 
-// 메뉴 버튼 동작
-els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); };
+els.menuBtn.onclick = (e) => { e.stopPropagation(); els.ui.classList.toggle('hidden'); }
 
 function init() {
     els.flipbook.innerHTML = "";
@@ -545,14 +533,12 @@ function createFlipBook() {
     pageFlip.loadFromHTML(document.querySelectorAll(".page-canvas"));
     totalPages = pageFlip.getPageCount();
     els.slider.max = totalPages - 1;
-    
     pageFlip.on('flip', (e) => { els.info.innerText = (e.data+1)+'/'+totalPages; els.slider.value = e.data; });
 }
 
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { createFlipBook(); }, 200); });
 
-// 이벤트 (원본과 동일 로직)
 els.bookContainer.addEventListener('mousedown', start); els.bookContainer.addEventListener('mouseup', end);
 els.bookContainer.addEventListener('touchstart', start, {passive:true}); els.bookContainer.addEventListener('touchend', end);
 let sX=0, sT=0;
@@ -565,8 +551,8 @@ function handleSmartClick(x, y) {
         clickTimer = setTimeout(() => {
             if (isLandscapeMode) {
                 const w = window.innerWidth, h = window.innerHeight;
-                const lSafe = (x>w*0.2 && x<w*0.3) && (y>h*0.45 && y<h*0.55);
-                const rSafe = (x>w*0.7 && x<w*0.8) && (y>h*0.45 && y<h*0.55);
+                const lSafe = (x>w*0.15 && x<w*0.35) && (y>h*0.4 && y<h*0.6);
+                const rSafe = (x>w*0.65 && x<w*0.85) && (y>h*0.4 && y<h*0.6);
                 if(lSafe || rSafe) { showToast("더블클릭 영역"); }
                 else { if(x < w/2) pageFlip.flipPrev(); else pageFlip.flipNext(); }
             } else {
@@ -591,7 +577,6 @@ document.getElementById('zoom-close').onclick=()=>els.zoomLayer.style.display='n
 els.slider.addEventListener('input', e=>pageFlip.flip(parseInt(e.target.value)));
 document.getElementById('btn-prev').onclick=()=>pageFlip.flipPrev();
 document.getElementById('btn-next').onclick=()=>pageFlip.flipNext();
-function toggleFull(){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 
 init();
 <\/script></body></html>`;
